@@ -1,0 +1,3417 @@
+{
+ "meta": {
+  "name": "Example — vegetarian lean-gain plan",
+  "athlete": "Example athlete",
+  "bw_kg": 87,
+  "currency": "EUR",
+  "country": "DE",
+  "freezer_portions": 24,
+  "data_note": "Example fixture with generic composition values — not a real person's verified plan."
+ },
+ "targets": {
+  "training": {
+   "kcal": 3000,
+   "protein_g": 215,
+   "carb_g": 365,
+   "fat_g": 76
+  },
+  "rest": {
+   "kcal": 2700,
+   "protein_g": 215,
+   "carb_g": 290,
+   "fat_g": 76
+  },
+  "free_kcal": 200,
+  "fiber_min": 30,
+  "salt_max": 6,
+  "micros": {
+   "iodine_ug": {
+    "floor": 200,
+    "aim": 200,
+    "ul": 600,
+    "supplement": 133,
+    "supplement_note": "400 µg tablet every 3rd day"
+   },
+   "b12_ug": {
+    "floor": 4,
+    "aim": 4,
+    "ul": null,
+    "supplement": 500
+   },
+   "vitD_ug": {
+    "floor": 20,
+    "aim": 20,
+    "ul": 100,
+    "supplement": 50
+   },
+   "calcium_mg": {
+    "floor": 1000,
+    "aim": 1000,
+    "ul": 2500
+   },
+   "magnesium_mg": {
+    "floor": 350,
+    "aim": 420,
+    "ul": null
+   },
+   "zinc_mg": {
+    "floor": 14,
+    "aim": 16,
+    "ul": 25
+   },
+   "iron_mg": {
+    "floor": 11,
+    "aim": 20,
+    "ul": 40
+   },
+   "selenium_ug": {
+    "floor": 70,
+    "aim": 70,
+    "ul": 255
+   },
+   "vitC_mg": {
+    "floor": 110,
+    "aim": 110,
+    "ul": null
+   },
+   "nitrate_mg": {
+    "floor": 400,
+    "aim": 500,
+    "ul": null
+   }
+  }
+ },
+ "ingredients": {
+  "oats": {
+   "name": "Oats, fine",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 372,
+    "protein_g": 13.5,
+    "fat_g": 7,
+    "satfat_g": 1.3,
+    "carb_g": 58.7,
+    "sugar_g": 1,
+    "fiber_g": 10,
+    "salt_g": 0.01,
+    "magnesium_mg": 138,
+    "iron_mg": 4.3,
+    "zinc_mg": 3.6,
+    "phosphorus_mg": 410,
+    "potassium_mg": 362,
+    "calcium_mg": 52,
+    "thiamin_mg": 0.46,
+    "riboflavin_mg": 0.16,
+    "niacin_mg": 1.1,
+    "b6_mg": 0.1,
+    "folate_ug": 32
+   },
+   "aa": {
+    "his": 0.31,
+    "ile": 0.54,
+    "leu": 1.012,
+    "lys": 0.432,
+    "met": 0.257,
+    "cys": 0.284,
+    "phe": 0.675,
+    "tyr": 0.405,
+    "thr": 0.446,
+    "trp": 0.162,
+    "val": 0.702
+   },
+   "digestibility": 0.86,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "ja! Zarte Haferflocken 500 g",
+    "price": 0.69,
+    "store": "REWE"
+   }
+  },
+  "soydrink": {
+   "name": "Soy drink, high protein",
+   "unit": "ml",
+   "category": "Drinks",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 46,
+    "protein_g": 5,
+    "fat_g": 2.1,
+    "satfat_g": 0.3,
+    "carb_g": 1,
+    "sugar_g": 0.8,
+    "fiber_g": 0.6,
+    "salt_g": 0.1,
+    "calcium_mg": 120,
+    "vitD_ug": 0.75,
+    "riboflavin_mg": 0.21,
+    "b12_ug": 0.38,
+    "iodine_ug": 0
+   },
+   "aa": {
+    "his": 0.13,
+    "ile": 0.225,
+    "leu": 0.39,
+    "lys": 0.31,
+    "met": 0.065,
+    "cys": 0.065,
+    "phe": 0.25,
+    "tyr": 0.18,
+    "thr": 0.19,
+    "trp": 0.065,
+    "val": 0.235
+   },
+   "digestibility": 0.95,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "ml",
+    "pack_label": "Vemondo High Protein 1 L",
+    "price": 1.15,
+    "store": "Lidl"
+   }
+  },
+  "isolate": {
+   "name": "Soy protein isolate",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 370,
+    "protein_g": 88,
+    "fat_g": 1.5,
+    "satfat_g": 0.3,
+    "carb_g": 1,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 1.3,
+    "iron_mg": 14,
+    "zinc_mg": 4,
+    "phosphorus_mg": 776,
+    "calcium_mg": 178,
+    "magnesium_mg": 39
+   },
+   "aa": {
+    "his": 2.288,
+    "ile": 3.96,
+    "leu": 6.864,
+    "lys": 5.456,
+    "met": 1.144,
+    "cys": 1.144,
+    "phe": 4.4,
+    "tyr": 3.168,
+    "thr": 3.344,
+    "trp": 1.144,
+    "val": 4.136
+   },
+   "digestibility": 0.95,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Soy isolate 1 kg",
+    "price": 19.9,
+    "store": "online"
+   }
+  },
+  "casein": {
+   "name": "Micellar casein",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 360,
+    "protein_g": 82,
+    "fat_g": 1.5,
+    "satfat_g": 1,
+    "carb_g": 4,
+    "sugar_g": 1,
+    "fiber_g": 0,
+    "salt_g": 0.2,
+    "calcium_mg": 1300
+   },
+   "aa": {
+    "his": 2.46,
+    "ile": 4.346,
+    "leu": 7.79,
+    "lys": 6.56,
+    "met": 2.296,
+    "cys": 0.328,
+    "phe": 4.1,
+    "tyr": 4.51,
+    "thr": 3.526,
+    "trp": 1.066,
+    "val": 5.33
+   },
+   "digestibility": 0.98,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Micellar casein 1 kg",
+    "price": 24.9,
+    "store": "online"
+   }
+  },
+  "berries": {
+   "name": "Mixed berries, frozen",
+   "unit": "g",
+   "category": "Frozen",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 45,
+    "protein_g": 0.8,
+    "fat_g": 0.3,
+    "satfat_g": 0,
+    "carb_g": 8,
+    "sugar_g": 6,
+    "fiber_g": 4,
+    "salt_g": 0,
+    "vitC_mg": 30,
+    "potassium_mg": 150,
+    "magnesium_mg": 15,
+    "vitK_ug": 15,
+    "folate_ug": 20
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 750,
+    "pack_unit": "g",
+    "pack_label": "ja! Beeren-Mischung 750 g",
+    "price": 2.69,
+    "store": "REWE"
+   }
+  },
+  "pumpkin": {
+   "name": "Pumpkin seeds",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 574,
+    "protein_g": 30,
+    "fat_g": 49,
+    "satfat_g": 8.7,
+    "carb_g": 4.7,
+    "sugar_g": 1,
+    "fiber_g": 6,
+    "salt_g": 0.02,
+    "magnesium_mg": 550,
+    "zinc_mg": 7.8,
+    "iron_mg": 8.8,
+    "phosphorus_mg": 1230
+   },
+   "aa": {
+    "his": 0.75,
+    "ile": 1.2,
+    "leu": 2.25,
+    "lys": 1.2,
+    "met": 0.6,
+    "cys": 0.51,
+    "phe": 1.5,
+    "tyr": 1.2,
+    "thr": 0.9,
+    "trp": 0.54,
+    "val": 1.5
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "REWE Bio Kürbiskerne 200 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "chia": {
+   "name": "Chia seeds",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 486,
+    "protein_g": 16.5,
+    "fat_g": 30.7,
+    "satfat_g": 3.3,
+    "carb_g": 7.7,
+    "sugar_g": 0,
+    "fiber_g": 34.4,
+    "salt_g": 0.04,
+    "calcium_mg": 631,
+    "magnesium_mg": 335
+   },
+   "aa": {
+    "his": 0.413,
+    "ile": 0.66,
+    "leu": 1.238,
+    "lys": 0.66,
+    "met": 0.33,
+    "cys": 0.281,
+    "phe": 0.825,
+    "tyr": 0.66,
+    "thr": 0.495,
+    "trp": 0.297,
+    "val": 0.825
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 300,
+    "pack_unit": "g",
+    "pack_label": "REWE Bio Chia-Samen 300 g",
+    "price": 2.79,
+    "store": "REWE"
+   }
+  },
+  "hemp": {
+   "name": "Hemp seeds, hulled",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 553,
+    "protein_g": 31.6,
+    "fat_g": 48.8,
+    "satfat_g": 4.6,
+    "carb_g": 1.6,
+    "sugar_g": 1,
+    "fiber_g": 4,
+    "salt_g": 0,
+    "magnesium_mg": 700,
+    "zinc_mg": 9.9
+   },
+   "aa": {
+    "his": 0.79,
+    "ile": 1.264,
+    "leu": 2.37,
+    "lys": 1.264,
+    "met": 0.632,
+    "cys": 0.537,
+    "phe": 1.58,
+    "tyr": 1.264,
+    "thr": 0.948,
+    "trp": 0.569,
+    "val": 1.58
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 150,
+    "pack_unit": "g",
+    "pack_label": "Davert Bio Hanfsamen 150 g",
+    "price": 3.49,
+    "store": "REWE"
+   }
+  },
+  "kiwi": {
+   "name": "Kiwi",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 61,
+    "protein_g": 1.1,
+    "fat_g": 0.5,
+    "satfat_g": 0,
+    "carb_g": 12,
+    "sugar_g": 9,
+    "fiber_g": 3,
+    "salt_g": 0,
+    "vitC_mg": 93,
+    "potassium_mg": 312,
+    "vitK_ug": 40
+   },
+   "piece_g": 75,
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 1,
+    "pack_unit": "pc",
+    "pack_label": "1 piece",
+    "price": 0.39,
+    "store": "REWE",
+    "shelf_days": 10
+   }
+  },
+  "almonds": {
+   "name": "Almonds",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 579,
+    "protein_g": 21,
+    "fat_g": 50,
+    "satfat_g": 3.8,
+    "carb_g": 9.5,
+    "sugar_g": 4,
+    "fiber_g": 12.5,
+    "salt_g": 0,
+    "magnesium_mg": 270,
+    "calcium_mg": 269,
+    "vitE_mg": 25.6
+   },
+   "aa": {
+    "his": 0.525,
+    "ile": 0.84,
+    "leu": 1.575,
+    "lys": 0.84,
+    "met": 0.42,
+    "cys": 0.357,
+    "phe": 1.05,
+    "tyr": 0.84,
+    "thr": 0.63,
+    "trp": 0.378,
+    "val": 1.05
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "ja! Mandeln 200 g",
+    "price": 2.29,
+    "store": "REWE"
+   }
+  },
+  "brazil": {
+   "name": "Brazil nuts",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 659,
+    "protein_g": 14.3,
+    "fat_g": 67,
+    "satfat_g": 15,
+    "carb_g": 4.2,
+    "sugar_g": 2,
+    "fiber_g": 7.5,
+    "salt_g": 0,
+    "selenium_ug": 1917
+   },
+   "aa": {
+    "his": 0.358,
+    "ile": 0.572,
+    "leu": 1.073,
+    "lys": 0.572,
+    "met": 0.286,
+    "cys": 0.243,
+    "phe": 0.715,
+    "tyr": 0.572,
+    "thr": 0.429,
+    "trp": 0.257,
+    "val": 0.715
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "ja! Paranusskerne 200 g",
+    "price": 3.29,
+    "store": "REWE"
+   }
+  },
+  "rucola": {
+   "name": "Rucola",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 25,
+    "protein_g": 2.6,
+    "fat_g": 0.7,
+    "satfat_g": 0.1,
+    "carb_g": 2,
+    "sugar_g": 2,
+    "fiber_g": 1.6,
+    "salt_g": 0.07,
+    "calcium_mg": 160,
+    "vitK_ug": 109,
+    "folate_ug": 97,
+    "vitC_mg": 15,
+    "nitrate_mg": 480
+   },
+   "aa": {
+    "his": 0.052,
+    "ile": 0.091,
+    "leu": 0.143,
+    "lys": 0.13,
+    "met": 0.031,
+    "cys": 0.026,
+    "phe": 0.091,
+    "tyr": 0.065,
+    "thr": 0.091,
+    "trp": 0.026,
+    "val": 0.117
+   },
+   "digestibility": 0.75,
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 125,
+    "pack_unit": "g",
+    "pack_label": "Rucola 125 g",
+    "price": 0.75,
+    "store": "REWE",
+    "shelf_days": 4
+   }
+  },
+  "beet": {
+   "name": "Beetroot, cooked",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 44,
+    "protein_g": 1.7,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 8,
+    "sugar_g": 8,
+    "fiber_g": 2,
+    "salt_g": 0.2,
+    "folate_ug": 80,
+    "potassium_mg": 305,
+    "nitrate_mg": 150
+   },
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Rote Bete gekocht 500 g",
+    "price": 1.69,
+    "store": "REWE",
+    "shelf_days": 14
+   }
+  },
+  "redonion": {
+   "name": "Red onion",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 40,
+    "protein_g": 1.1,
+    "fat_g": 0.1,
+    "satfat_g": 0,
+    "carb_g": 7.6,
+    "sugar_g": 4,
+    "fiber_g": 1.7,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Rote Zwiebeln 500 g",
+    "price": 1.29,
+    "store": "REWE",
+    "shelf_days": 21
+   }
+  },
+  "lemon": {
+   "name": "Lemon juice",
+   "unit": "ml",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 22,
+    "protein_g": 0.4,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 7,
+    "sugar_g": 2.5,
+    "fiber_g": 0.3,
+    "salt_g": 0,
+    "vitC_mg": 38
+   },
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 40,
+    "pack_unit": "ml",
+    "pack_label": "1 lemon (~40 ml juice)",
+    "price": 0.55,
+    "store": "REWE",
+    "shelf_days": 14
+   }
+  },
+  "balsamic": {
+   "name": "Balsamic vinegar",
+   "unit": "ml",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 88,
+    "protein_g": 0.5,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 17,
+    "sugar_g": 15,
+    "fiber_g": 0,
+    "salt_g": 0.05
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "ml",
+    "pack_label": "ja! Aceto Balsamico 500 ml",
+    "price": 1.69,
+    "store": "REWE"
+   }
+  },
+  "dijon": {
+   "name": "Dijon mustard",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 151,
+    "protein_g": 7,
+    "fat_g": 11,
+    "satfat_g": 0.6,
+    "carb_g": 3.5,
+    "sugar_g": 2,
+    "fiber_g": 0,
+    "salt_g": 5.5
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 185,
+    "pack_unit": "g",
+    "pack_label": "Dijon Senf 185 ml",
+    "price": 1.49,
+    "store": "REWE"
+   }
+  },
+  "maple": {
+   "name": "Maple syrup",
+   "unit": "ml",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 260,
+    "protein_g": 0,
+    "fat_g": 0.1,
+    "satfat_g": 0,
+    "carb_g": 67,
+    "sugar_g": 60,
+    "fiber_g": 0,
+    "salt_g": 0.03
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 250,
+    "pack_unit": "ml",
+    "pack_label": "REWE Bio Ahornsirup 250 ml",
+    "price": 4.99,
+    "store": "REWE"
+   }
+  },
+  "garlic": {
+   "name": "Garlic",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 149,
+    "protein_g": 6.4,
+    "fat_g": 0.5,
+    "satfat_g": 0.1,
+    "carb_g": 33,
+    "sugar_g": 1,
+    "fiber_g": 2.1,
+    "salt_g": 0.04
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "Knoblauch 200 g",
+    "price": 0.99,
+    "store": "REWE",
+    "shelf_days": 30
+   }
+  },
+  "salt": {
+   "name": "Iodised salt",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 100,
+    "iodine_ug": 2000
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "ja! Jodsalz 500 g",
+    "price": 0.29,
+    "store": "REWE"
+   }
+  },
+  "rice": {
+   "name": "Basmati rice, dry",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 350,
+    "protein_g": 7.5,
+    "fat_g": 0.6,
+    "satfat_g": 0.2,
+    "carb_g": 78,
+    "sugar_g": 0,
+    "fiber_g": 1.3,
+    "salt_g": 0,
+    "magnesium_mg": 25,
+    "thiamin_mg": 0.07
+   },
+   "aa": {
+    "his": 0.172,
+    "ile": 0.3,
+    "leu": 0.562,
+    "lys": 0.24,
+    "met": 0.142,
+    "cys": 0.158,
+    "phe": 0.375,
+    "tyr": 0.225,
+    "thr": 0.247,
+    "trp": 0.09,
+    "val": 0.39
+   },
+   "digestibility": 0.88,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "ja! Basmati Reis 1 kg",
+    "price": 2.99,
+    "store": "REWE"
+   }
+  },
+  "water": {
+   "name": "Water",
+   "unit": "ml",
+   "category": "—",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0,
+    "thiamin_mg": 0,
+    "riboflavin_mg": 0,
+    "niacin_mg": 0,
+    "pantothenic_mg": 0,
+    "b6_mg": 0,
+    "biotin_ug": 0,
+    "folate_ug": 0,
+    "b12_ug": 0,
+    "potassium_mg": 0,
+    "phosphorus_mg": 0,
+    "magnesium_mg": 0,
+    "calcium_mg": 0,
+    "zinc_mg": 0,
+    "iron_mg": 0,
+    "selenium_ug": 0,
+    "iodine_ug": 0,
+    "vitA_rae_ug": 0,
+    "vitC_mg": 0,
+    "vitD_ug": 0,
+    "vitE_mg": 0,
+    "vitK_ug": 0,
+    "sodium_mg": 0,
+    "nitrate_mg": 0
+   }
+  },
+  "lentils": {
+   "name": "Red lentils, split",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 358,
+    "protein_g": 24.6,
+    "fat_g": 2.2,
+    "satfat_g": 0.4,
+    "carb_g": 48,
+    "sugar_g": 2,
+    "fiber_g": 11,
+    "salt_g": 0.01,
+    "iron_mg": 7.4,
+    "zinc_mg": 3.6,
+    "magnesium_mg": 59,
+    "folate_ug": 204,
+    "potassium_mg": 578
+   },
+   "aa": {
+    "his": 0.689,
+    "ile": 1.058,
+    "leu": 1.796,
+    "lys": 1.722,
+    "met": 0.209,
+    "cys": 0.32,
+    "phe": 1.23,
+    "tyr": 0.664,
+    "thr": 0.886,
+    "trp": 0.221,
+    "val": 1.23
+   },
+   "digestibility": 0.78,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "REWE Bio Rote Linsen 500 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "chunks": {
+   "name": "Soy chunks, dry",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "Vantastic Foods label (macros); USDA soy flour (micros)",
+   "per100": {
+    "kcal": 332,
+    "protein_g": 49,
+    "fat_g": 1.2,
+    "satfat_g": 0.3,
+    "carb_g": 27,
+    "sugar_g": 7,
+    "fiber_g": 8.8,
+    "salt_g": 0.01,
+    "iron_mg": 9,
+    "magnesium_mg": 290,
+    "zinc_mg": 2.5
+   },
+   "aa": {
+    "his": 1.274,
+    "ile": 2.205,
+    "leu": 3.822,
+    "lys": 3.038,
+    "met": 0.637,
+    "cys": 0.637,
+    "phe": 2.45,
+    "tyr": 1.764,
+    "thr": 1.862,
+    "trp": 0.637,
+    "val": 2.303
+   },
+   "digestibility": 0.9,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Vantastic Soja Schnetzel 1 kg",
+    "price": 8.99,
+    "store": "online"
+   }
+  },
+  "onion": {
+   "name": "Onion",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 40,
+    "protein_g": 1.1,
+    "fat_g": 0.1,
+    "satfat_g": 0,
+    "carb_g": 7.6,
+    "sugar_g": 4.2,
+    "fiber_g": 1.7,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Speisezwiebeln 1 kg",
+    "price": 0.89,
+    "store": "REWE",
+    "shelf_days": 30
+   }
+  },
+  "ginger": {
+   "name": "Ginger",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 80,
+    "protein_g": 1.8,
+    "fat_g": 0.8,
+    "satfat_g": 0.2,
+    "carb_g": 15,
+    "sugar_g": 1.7,
+    "fiber_g": 2,
+    "salt_g": 0.03
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 50,
+    "pack_unit": "g",
+    "pack_label": "Ingwer ~50 g",
+    "price": 0.69,
+    "store": "REWE",
+    "shelf_days": 21
+   }
+  },
+  "tomatoes": {
+   "name": "Chopped tomatoes, tinned",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 21,
+    "protein_g": 1,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 3,
+    "sugar_g": 3,
+    "fiber_g": 1,
+    "salt_g": 0.03,
+    "potassium_mg": 220,
+    "vitC_mg": 10
+   },
+   "aa": {
+    "his": 0.02,
+    "ile": 0.035,
+    "leu": 0.055,
+    "lys": 0.05,
+    "met": 0.012,
+    "cys": 0.01,
+    "phe": 0.035,
+    "tyr": 0.025,
+    "thr": 0.035,
+    "trp": 0.01,
+    "val": 0.045
+   },
+   "digestibility": 0.75,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 400,
+    "pack_unit": "g",
+    "pack_label": "ja! Tomaten gehackt 400 g",
+    "price": 0.59,
+    "store": "REWE"
+   }
+  },
+  "spinach": {
+   "name": "Leaf spinach, frozen",
+   "unit": "g",
+   "category": "Frozen",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 28,
+    "protein_g": 3,
+    "fat_g": 0.4,
+    "satfat_g": 0.1,
+    "carb_g": 0.8,
+    "sugar_g": 0.5,
+    "fiber_g": 2.9,
+    "salt_g": 0.2,
+    "calcium_mg": 130,
+    "iron_mg": 2,
+    "folate_ug": 120,
+    "vitK_ug": 370,
+    "vitA_rae_ug": 470,
+    "magnesium_mg": 70,
+    "nitrate_mg": 150
+   },
+   "aa": {
+    "his": 0.06,
+    "ile": 0.105,
+    "leu": 0.165,
+    "lys": 0.15,
+    "met": 0.036,
+    "cys": 0.03,
+    "phe": 0.105,
+    "tyr": 0.075,
+    "thr": 0.105,
+    "trp": 0.03,
+    "val": 0.135
+   },
+   "digestibility": 0.75,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "ja! Blattspinat 1 kg",
+    "price": 2.39,
+    "store": "REWE"
+   }
+  },
+  "oil": {
+   "name": "Olive oil",
+   "unit": "ml",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 884,
+    "protein_g": 0,
+    "fat_g": 100,
+    "satfat_g": 14,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0,
+    "vitE_mg": 14
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 750,
+    "pack_unit": "ml",
+    "pack_label": "ja! Olivenöl extra 750 ml",
+    "price": 5.99,
+    "store": "REWE"
+   }
+  },
+  "garam": {
+   "name": "Garam masala",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 380,
+    "protein_g": 15,
+    "fat_g": 15,
+    "satfat_g": 3,
+    "carb_g": 45,
+    "sugar_g": 2,
+    "fiber_g": 20,
+    "salt_g": 0.1
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 33,
+    "pack_unit": "g",
+    "pack_label": "Garam masala 33 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "turmeric": {
+   "name": "Turmeric",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 312,
+    "protein_g": 9.7,
+    "fat_g": 3.3,
+    "satfat_g": 1.8,
+    "carb_g": 45,
+    "sugar_g": 3,
+    "fiber_g": 22,
+    "salt_g": 0.1,
+    "iron_mg": 55
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 37,
+    "pack_unit": "g",
+    "pack_label": "Kurkuma 37 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "cumin": {
+   "name": "Cumin, ground",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 375,
+    "protein_g": 18,
+    "fat_g": 22,
+    "satfat_g": 1.5,
+    "carb_g": 34,
+    "sugar_g": 2.3,
+    "fiber_g": 10.5,
+    "salt_g": 0.4,
+    "iron_mg": 66
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 35,
+    "pack_unit": "g",
+    "pack_label": "Kreuzkümmel 35 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "kidney": {
+   "name": "Kidney beans, drained",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 100,
+    "protein_g": 7,
+    "fat_g": 0.5,
+    "satfat_g": 0.1,
+    "carb_g": 13,
+    "sugar_g": 0.3,
+    "fiber_g": 6,
+    "salt_g": 0.5,
+    "iron_mg": 2,
+    "folate_ug": 60
+   },
+   "aa": {
+    "his": 0.196,
+    "ile": 0.301,
+    "leu": 0.511,
+    "lys": 0.49,
+    "met": 0.06,
+    "cys": 0.091,
+    "phe": 0.35,
+    "tyr": 0.189,
+    "thr": 0.252,
+    "trp": 0.063,
+    "val": 0.35
+   },
+   "digestibility": 0.78,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 255,
+    "pack_unit": "g",
+    "pack_label": "ja! Kidney-Bohnen (255 g drained)",
+    "price": 0.69,
+    "store": "REWE"
+   }
+  },
+  "blackbeans": {
+   "name": "Black beans, drained",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 91,
+    "protein_g": 6,
+    "fat_g": 0.3,
+    "satfat_g": 0.1,
+    "carb_g": 12,
+    "sugar_g": 0.3,
+    "fiber_g": 7,
+    "salt_g": 0.4
+   },
+   "aa": {
+    "his": 0.168,
+    "ile": 0.258,
+    "leu": 0.438,
+    "lys": 0.42,
+    "met": 0.051,
+    "cys": 0.078,
+    "phe": 0.3,
+    "tyr": 0.162,
+    "thr": 0.216,
+    "trp": 0.054,
+    "val": 0.3
+   },
+   "digestibility": 0.78,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 240,
+    "pack_unit": "g",
+    "pack_label": "Schwarze Bohnen (240 g drained)",
+    "price": 0.75,
+    "store": "REWE"
+   }
+  },
+  "pepper": {
+   "name": "Red pepper",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 31,
+    "protein_g": 1,
+    "fat_g": 0.3,
+    "satfat_g": 0,
+    "carb_g": 4.6,
+    "sugar_g": 4.2,
+    "fiber_g": 2.1,
+    "salt_g": 0,
+    "vitC_mg": 128,
+    "vitA_rae_ug": 157
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Paprika rot 500 g",
+    "price": 2.49,
+    "store": "REWE",
+    "shelf_days": 10
+   }
+  },
+  "tpaste": {
+   "name": "Tomato paste",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 82,
+    "protein_g": 4.3,
+    "fat_g": 0.5,
+    "satfat_g": 0.1,
+    "carb_g": 14,
+    "sugar_g": 12,
+    "fiber_g": 4,
+    "salt_g": 0.1
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "ja! Tomatenmark 200 g",
+    "price": 0.89,
+    "store": "REWE"
+   }
+  },
+  "paprika": {
+   "name": "Smoked paprika",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 282,
+    "protein_g": 14,
+    "fat_g": 13,
+    "satfat_g": 2,
+    "carb_g": 34,
+    "sugar_g": 10,
+    "fiber_g": 35,
+    "salt_g": 0.1
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 39,
+    "pack_unit": "g",
+    "pack_label": "Paprika geräuchert 39 g",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "chili": {
+   "name": "Chili flakes",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 318,
+    "protein_g": 12,
+    "fat_g": 17,
+    "satfat_g": 3,
+    "carb_g": 30,
+    "sugar_g": 10,
+    "fiber_g": 27,
+    "salt_g": 0.1
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 40,
+    "pack_unit": "g",
+    "pack_label": "Chiliflocken 40 g",
+    "price": 1.49,
+    "store": "REWE"
+   }
+  },
+  "cocoa": {
+   "name": "Cocoa powder",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 228,
+    "protein_g": 19.6,
+    "fat_g": 13.7,
+    "satfat_g": 8,
+    "carb_g": 12,
+    "sugar_g": 1.8,
+    "fiber_g": 33,
+    "salt_g": 0.05,
+    "magnesium_mg": 499,
+    "iron_mg": 13.9
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 250,
+    "pack_unit": "g",
+    "pack_label": "Kakao 250 g",
+    "price": 2.49,
+    "store": "REWE"
+   }
+  },
+  "yeast": {
+   "name": "Nutritional yeast flakes",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "Vantastic label (fibre not listed)",
+   "per100": {
+    "kcal": 314,
+    "protein_g": 49,
+    "fat_g": 5,
+    "satfat_g": 1.7,
+    "carb_g": 9,
+    "sugar_g": 8,
+    "fiber_g": null,
+    "salt_g": 0.2,
+    "b12_ug": 0.3
+   },
+   "aa": {
+    "his": 1.127,
+    "ile": 1.96,
+    "leu": 3.675,
+    "lys": 1.568,
+    "met": 0.931,
+    "cys": 1.029,
+    "phe": 2.45,
+    "tyr": 1.47,
+    "thr": 1.617,
+    "trp": 0.588,
+    "val": 2.548
+   },
+   "digestibility": 0.85,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "Vantastic Yeast Flakes 200 g",
+    "price": 3.79,
+    "store": "REWE"
+   }
+  },
+  "stock": {
+   "name": "Vegetable stock powder",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 240,
+    "protein_g": 8,
+    "fat_g": 10,
+    "satfat_g": 4,
+    "carb_g": 28,
+    "sugar_g": 10,
+    "fiber_g": 1,
+    "salt_g": 50
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 140,
+    "pack_unit": "g",
+    "pack_label": "ja! Gemüsebrühe 140 g",
+    "price": 0.59,
+    "store": "REWE"
+   }
+  },
+  "chickpeas": {
+   "name": "Chickpeas, drained",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 139,
+    "protein_g": 7,
+    "fat_g": 2.6,
+    "satfat_g": 0.3,
+    "carb_g": 18,
+    "sugar_g": 0.5,
+    "fiber_g": 7.6,
+    "salt_g": 0.5,
+    "iron_mg": 1.8,
+    "folate_ug": 100
+   },
+   "aa": {
+    "his": 0.196,
+    "ile": 0.301,
+    "leu": 0.511,
+    "lys": 0.49,
+    "met": 0.06,
+    "cys": 0.091,
+    "phe": 0.35,
+    "tyr": 0.189,
+    "thr": 0.252,
+    "trp": 0.063,
+    "val": 0.35
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 240,
+    "pack_unit": "g",
+    "pack_label": "ja! Kichererbsen (240 g drained)",
+    "price": 0.59,
+    "store": "REWE"
+   }
+  },
+  "sweetpotato": {
+   "name": "Sweet potato",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 86,
+    "protein_g": 1.6,
+    "fat_g": 0.1,
+    "satfat_g": 0,
+    "carb_g": 18,
+    "sugar_g": 4,
+    "fiber_g": 3,
+    "salt_g": 0.14,
+    "vitA_rae_ug": 709,
+    "potassium_mg": 337
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Süßkartoffeln 1 kg",
+    "price": 2.99,
+    "store": "REWE",
+    "shelf_days": 21
+   }
+  },
+  "cauli": {
+   "name": "Cauliflower, frozen",
+   "unit": "g",
+   "category": "Frozen",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 25,
+    "protein_g": 1.9,
+    "fat_g": 0.3,
+    "satfat_g": 0.1,
+    "carb_g": 3,
+    "sugar_g": 2,
+    "fiber_g": 2,
+    "salt_g": 0.05,
+    "vitC_mg": 46
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "ja! Blumenkohl TK 1 kg",
+    "price": 1.99,
+    "store": "REWE"
+   }
+  },
+  "coconut": {
+   "name": "Coconut milk, light",
+   "unit": "ml",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 70,
+    "protein_g": 0.7,
+    "fat_g": 7,
+    "satfat_g": 6.2,
+    "carb_g": 1.5,
+    "sugar_g": 1.5,
+    "fiber_g": 0,
+    "salt_g": 0.05
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 400,
+    "pack_unit": "ml",
+    "pack_label": "Kokosmilch fettreduziert 400 ml",
+    "price": 1.29,
+    "store": "REWE"
+   }
+  },
+  "curry": {
+   "name": "Red curry paste",
+   "unit": "g",
+   "category": "Tins",
+   "source": "Bamboo Garden label",
+   "per100": {
+    "kcal": 116,
+    "protein_g": 2,
+    "fat_g": 3.1,
+    "satfat_g": 0.4,
+    "carb_g": 18.1,
+    "sugar_g": 8,
+    "fiber_g": null,
+    "salt_g": 5.9
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 110,
+    "pack_unit": "g",
+    "pack_label": "Rote Currypaste 110 g",
+    "price": 1.39,
+    "store": "REWE"
+   }
+  },
+  "carrot": {
+   "name": "Carrot",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 41,
+    "protein_g": 0.9,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 7,
+    "sugar_g": 4.7,
+    "fiber_g": 2.8,
+    "salt_g": 0.17,
+    "vitA_rae_ug": 835
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Karotten 1 kg",
+    "price": 0.99,
+    "store": "REWE",
+    "shelf_days": 21
+   }
+  },
+  "celery": {
+   "name": "Celery stalk",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 16,
+    "protein_g": 0.7,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 1.4,
+    "sugar_g": 1.3,
+    "fiber_g": 1.6,
+    "salt_g": 0.2,
+    "nitrate_mg": 250
+   },
+   "shop": {
+    "buy": "batch",
+    "pack_size": 400,
+    "pack_unit": "g",
+    "pack_label": "Staudensellerie ~400 g",
+    "price": 1.49,
+    "store": "REWE",
+    "shelf_days": 14
+   }
+  },
+  "passata": {
+   "name": "Passata",
+   "unit": "g",
+   "category": "Tins",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 30,
+    "protein_g": 1.5,
+    "fat_g": 0.2,
+    "satfat_g": 0,
+    "carb_g": 5,
+    "sugar_g": 4,
+    "fiber_g": 1.2,
+    "salt_g": 0.05
+   },
+   "aa": {
+    "his": 0.03,
+    "ile": 0.053,
+    "leu": 0.083,
+    "lys": 0.075,
+    "met": 0.018,
+    "cys": 0.015,
+    "phe": 0.053,
+    "tyr": 0.038,
+    "thr": 0.053,
+    "trp": 0.015,
+    "val": 0.068
+   },
+   "digestibility": 0.75,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "ja! Tomaten passiert 500 g",
+    "price": 0.65,
+    "store": "REWE"
+   }
+  },
+  "oregano": {
+   "name": "Oregano, dried",
+   "unit": "g",
+   "category": "Spices",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 265,
+    "protein_g": 9,
+    "fat_g": 4.3,
+    "satfat_g": 1.6,
+    "carb_g": 26,
+    "sugar_g": 4,
+    "fiber_g": 42,
+    "salt_g": 0.04
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 15,
+    "pack_unit": "g",
+    "pack_label": "Oregano 15 g",
+    "price": 0.99,
+    "store": "REWE"
+   }
+  },
+  "spaghetti": {
+   "name": "Whole-wheat spaghetti, dry",
+   "unit": "g",
+   "category": "Dry goods",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 350,
+    "protein_g": 13,
+    "fat_g": 2.5,
+    "satfat_g": 0.4,
+    "carb_g": 64,
+    "sugar_g": 3,
+    "fiber_g": 8,
+    "salt_g": 0.01,
+    "magnesium_mg": 140,
+    "iron_mg": 3.6,
+    "zinc_mg": 3
+   },
+   "aa": {
+    "his": 0.299,
+    "ile": 0.52,
+    "leu": 0.975,
+    "lys": 0.416,
+    "met": 0.247,
+    "cys": 0.273,
+    "phe": 0.65,
+    "tyr": 0.39,
+    "thr": 0.429,
+    "trp": 0.156,
+    "val": 0.676
+   },
+   "digestibility": 0.87,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "REWE Bio Vollkorn-Spaghetti 500 g",
+    "price": 1.19,
+    "store": "REWE"
+   }
+  },
+  "avocado": {
+   "name": "Avocado",
+   "unit": "g",
+   "category": "Fruit & veg",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 160,
+    "protein_g": 2,
+    "fat_g": 14.7,
+    "satfat_g": 2.1,
+    "carb_g": 1.8,
+    "sugar_g": 0.7,
+    "fiber_g": 6.7,
+    "salt_g": 0,
+    "potassium_mg": 485,
+    "vitK_ug": 21,
+    "folate_ug": 81
+   },
+   "piece_g": 150,
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 1,
+    "pack_unit": "pc",
+    "pack_label": "1 avocado (~150 g flesh)",
+    "price": 1.69,
+    "store": "REWE",
+    "shelf_days": 5
+   }
+  },
+  "walnuts": {
+   "name": "Walnuts",
+   "unit": "g",
+   "category": "Seeds & nuts",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 654,
+    "protein_g": 15,
+    "fat_g": 65,
+    "satfat_g": 6,
+    "carb_g": 7,
+    "sugar_g": 2.6,
+    "fiber_g": 6.7,
+    "salt_g": 0
+   },
+   "aa": {
+    "his": 0.375,
+    "ile": 0.6,
+    "leu": 1.125,
+    "lys": 0.6,
+    "met": 0.3,
+    "cys": 0.255,
+    "phe": 0.75,
+    "tyr": 0.6,
+    "thr": 0.45,
+    "trp": 0.27,
+    "val": 0.75
+   },
+   "digestibility": 0.8,
+   "shop": {
+    "buy": "stock",
+    "pack_size": 200,
+    "pack_unit": "g",
+    "pack_label": "ja! Walnüsse 200 g",
+    "price": 2.49,
+    "store": "REWE"
+   }
+  },
+  "applejuice": {
+   "name": "Apple juice",
+   "unit": "ml",
+   "category": "Drinks",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 46,
+    "protein_g": 0.1,
+    "fat_g": 0.1,
+    "satfat_g": 0,
+    "carb_g": 11,
+    "sugar_g": 10,
+    "fiber_g": 0.2,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "fresh",
+    "pack_size": 1000,
+    "pack_unit": "ml",
+    "pack_label": "Apfelsaft naturtrüb 1 L",
+    "price": 1.19,
+    "store": "REWE",
+    "shelf_days": 60
+   }
+  },
+  "glycerol": {
+   "name": "Glycerol 99.5 %",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "counted as carbohydrate, 4.3 kcal/g",
+   "per100": {
+    "kcal": 430,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 100,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Glycerol E422 1 L (1.26 kg)",
+    "price": 12.9,
+    "store": "online"
+   }
+  },
+  "citrulline": {
+   "name": "Citrulline malate 2:1",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "treated as 0 kcal",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Citrulline malate 500 g",
+    "price": 17.9,
+    "store": "online"
+   }
+  },
+  "betaalanine": {
+   "name": "Beta-alanine",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Beta-alanine 500 g",
+    "price": 14.9,
+    "store": "online"
+   }
+  },
+  "taurine": {
+   "name": "Taurine",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 500,
+    "pack_unit": "g",
+    "pack_label": "Taurine 500 g",
+    "price": 9.9,
+    "store": "online"
+   }
+  },
+  "creatine": {
+   "name": "Creatine monohydrate",
+   "unit": "g",
+   "category": "Powders (online)",
+   "source": "example values (USDA-style generic)",
+   "per100": {
+    "kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "satfat_g": 0,
+    "carb_g": 0,
+    "sugar_g": 0,
+    "fiber_g": 0,
+    "salt_g": 0
+   },
+   "shop": {
+    "buy": "stock",
+    "pack_size": 1000,
+    "pack_unit": "g",
+    "pack_label": "Creatine 1 kg",
+    "price": 22.9,
+    "store": "online"
+   }
+  }
+ },
+ "recipes": {
+  "oat_bowl": {
+   "title": "Breakfast Oat Bowl",
+   "kind": "single",
+   "when": "Daily · 07:30",
+   "desc": "Overnight oats with soy drink, soy isolate, berries and seeds.",
+   "items": [
+    [
+     "oats",
+     80
+    ],
+    [
+     "soydrink",
+     300
+    ],
+    [
+     "isolate",
+     15
+    ],
+    [
+     "berries",
+     105
+    ],
+    [
+     "pumpkin",
+     8
+    ],
+    [
+     "chia",
+     4
+    ],
+    [
+     "hemp",
+     3
+    ]
+   ],
+   "prep": [
+    "Mix the night before in a jar."
+   ],
+   "steps": [
+    [
+     "Stir oats, isolate and seeds into the soy drink.",
+     null
+    ],
+    [
+     "Top with frozen berries, lid on, fridge overnight.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "salad": {
+   "title": "Beet & Rucola Salad",
+   "kind": "single",
+   "when": "Daily with the pre-workout plate",
+   "desc": "High-nitrate salad, oil-free dressing.",
+   "items": [
+    [
+     "rucola",
+     125
+    ],
+    [
+     "beet",
+     140
+    ],
+    [
+     "redonion",
+     25
+    ],
+    [
+     "lemon",
+     15
+    ],
+    [
+     "balsamic",
+     15
+    ],
+    [
+     "dijon",
+     3
+    ],
+    [
+     "maple",
+     3
+    ],
+    [
+     "garlic",
+     2
+    ],
+    [
+     "salt",
+     1
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Whisk lemon, balsamic, Dijon, maple, garlic and salt.",
+     null
+    ],
+    [
+     "Toss with rucola, sliced beet and onion.",
+     null
+    ]
+   ],
+   "notes": [
+    "~500–800 mg nitrate target per day."
+   ]
+  },
+  "pump": {
+   "title": "Pre-Workout Pump Drink",
+   "kind": "single",
+   "when": "Training days · T −60 min",
+   "desc": "Citrulline, beta-alanine, taurine, salt and glycerol in 1.3 L water.",
+   "items": [
+    [
+     "citrulline",
+     15
+    ],
+    [
+     "betaalanine",
+     4
+    ],
+    [
+     "taurine",
+     2
+    ],
+    [
+     "salt",
+     2
+    ],
+    [
+     "glycerol",
+     40
+    ],
+    [
+     "water",
+     1300
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Shake the dry mix with the glycerol into the water; drink over 10–15 min.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "intra": {
+   "title": "Intra-Workout Juice",
+   "kind": "single",
+   "when": "Training days · during the session",
+   "desc": "Apple juice 1:1 with water and a pinch of salt.",
+   "items": [
+    [
+     "applejuice",
+     250
+    ],
+    [
+     "water",
+     250
+    ],
+    [
+     "salt",
+     0.5
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Mix and sip from first working set to last.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "pwo": {
+   "title": "Post-Workout Shake",
+   "kind": "single",
+   "when": "After training (rest day: lunch)",
+   "desc": "Soy drink, soy isolate and creatine.",
+   "items": [
+    [
+     "soydrink",
+     400
+    ],
+    [
+     "isolate",
+     30
+    ],
+    [
+     "creatine",
+     8
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Shake.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "night": {
+   "title": "Night Casein Shake",
+   "kind": "single",
+   "when": "Daily · 22:00",
+   "desc": "Slow-digesting casein.",
+   "items": [
+    [
+     "soydrink",
+     400
+    ],
+    [
+     "casein",
+     30
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Shake.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "rice": {
+   "title": "Weekly Rice Batch",
+   "kind": "batch",
+   "portions": 23,
+   "when": "Every Sunday",
+   "desc": "400 g dry basmati split into 23 equal parts: 4 per training bag, 3 for Sunday.",
+   "items": [
+    [
+     "rice",
+     400
+    ]
+   ],
+   "prep": [
+    "Weigh the empty pot."
+   ],
+   "steps": [
+    [
+     "Rinse, cook with ~610 ml water.",
+     12
+    ],
+    [
+     "Weigh, divide by 23, bag 5 × 4 parts + 1 × 3 parts, freeze.",
+     null
+    ]
+   ],
+   "notes": [],
+   "storage_units": 6
+  },
+  "dal": {
+   "title": "Red Lentil Dal",
+   "kind": "batch",
+   "portions": 5,
+   "when": "Batch · Sunday A",
+   "desc": "Lean batch.",
+   "items": [
+    [
+     "lentils",
+     300
+    ],
+    [
+     "chunks",
+     100
+    ],
+    [
+     "onion",
+     300
+    ],
+    [
+     "garlic",
+     12
+    ],
+    [
+     "ginger",
+     15
+    ],
+    [
+     "tomatoes",
+     800,
+     null,
+     "2 × 400 g"
+    ],
+    [
+     "spinach",
+     250
+    ],
+    [
+     "oil",
+     15
+    ],
+    [
+     "garam",
+     6
+    ],
+    [
+     "turmeric",
+     3
+    ],
+    [
+     "cumin",
+     3
+    ],
+    [
+     "water",
+     1100
+    ],
+    [
+     "salt",
+     8
+    ]
+   ],
+   "prep": [
+    "Soak chunks."
+   ],
+   "steps": [
+    [
+     "Cook onion in oil.",
+     8
+    ],
+    [
+     "Add everything but spinach, simmer.",
+     20
+    ],
+    [
+     "Add spinach.",
+     7
+    ],
+    [
+     "Portion into 5 by weight; freeze.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "chili": {
+   "title": "Bean & Soy Chili",
+   "kind": "batch",
+   "portions": 5,
+   "when": "Batch · Sunday A and B",
+   "desc": "Lean batch.",
+   "items": [
+    [
+     "kidney",
+     510,
+     null,
+     "2 tins"
+    ],
+    [
+     "blackbeans",
+     240,
+     null,
+     "1 tin"
+    ],
+    [
+     "chunks",
+     150
+    ],
+    [
+     "stock",
+     6
+    ],
+    [
+     "water",
+     300
+    ],
+    [
+     "onion",
+     300
+    ],
+    [
+     "pepper",
+     500
+    ],
+    [
+     "tomatoes",
+     800,
+     null,
+     "2 × 400 g"
+    ],
+    [
+     "tpaste",
+     40
+    ],
+    [
+     "oil",
+     15
+    ],
+    [
+     "cumin",
+     6
+    ],
+    [
+     "paprika",
+     6
+    ],
+    [
+     "chili",
+     3
+    ],
+    [
+     "cocoa",
+     3
+    ],
+    [
+     "yeast",
+     10
+    ],
+    [
+     "salt",
+     6
+    ]
+   ],
+   "prep": [
+    "Rehydrate chunks in the stock."
+   ],
+   "steps": [
+    [
+     "Soften onion and pepper.",
+     8
+    ],
+    [
+     "Add the rest, simmer.",
+     25
+    ],
+    [
+     "Portion into 5; freeze.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "curry": {
+   "title": "Chickpea Sweet Potato Curry",
+   "kind": "batch",
+   "portions": 5,
+   "when": "Batch · Sunday A and B",
+   "desc": "Rich batch.",
+   "items": [
+    [
+     "chickpeas",
+     480,
+     null,
+     "2 tins"
+    ],
+    [
+     "chunks",
+     125
+    ],
+    [
+     "sweetpotato",
+     1000
+    ],
+    [
+     "cauli",
+     250
+    ],
+    [
+     "tomatoes",
+     800,
+     null,
+     "2 × 400 g"
+    ],
+    [
+     "coconut",
+     400
+    ],
+    [
+     "curry",
+     55
+    ],
+    [
+     "oil",
+     40
+    ],
+    [
+     "salt",
+     5
+    ]
+   ],
+   "prep": [
+    "Soak chunks in hot stock 10 min."
+   ],
+   "steps": [
+    [
+     "Brown chunks in oil.",
+     5
+    ],
+    [
+     "Add paste, then everything else; simmer.",
+     25
+    ],
+    [
+     "Portion into 5; freeze.",
+     null
+    ]
+   ],
+   "notes": []
+  },
+  "bolo": {
+   "title": "Soy Bolognese",
+   "kind": "batch",
+   "portions": 5,
+   "when": "Batch · Sunday A",
+   "desc": "Rich batch, served on whole-wheat spaghetti.",
+   "items": [
+    [
+     "chunks",
+     150
+    ],
+    [
+     "carrot",
+     250
+    ],
+    [
+     "celery",
+     100
+    ],
+    [
+     "onion",
+     150
+    ],
+    [
+     "passata",
+     1000
+    ],
+    [
+     "oil",
+     30
+    ],
+    [
+     "yeast",
+     10
+    ],
+    [
+     "oregano",
+     3
+    ],
+    [
+     "salt",
+     6
+    ]
+   ],
+   "prep": [],
+   "steps": [
+    [
+     "Soften the soffritto.",
+     10
+    ],
+    [
+     "Add the rest, simmer.",
+     30
+    ],
+    [
+     "Portion into 5; freeze.",
+     null
+    ]
+   ],
+   "notes": []
+  }
+ },
+ "days": {
+  "Mon": {
+   "label": "Monday",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      },
+      {
+       "ingredient": "brazil",
+       "amount": 5
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "dal"
+      },
+      {
+       "recipe": "rice",
+       "portions": 4
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "curry"
+      },
+      {
+       "ingredient": "avocado",
+       "amount": 70
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Tue": {
+   "label": "Tuesday",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "chili"
+      },
+      {
+       "recipe": "rice",
+       "portions": 4
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "bolo"
+      },
+      {
+       "ingredient": "walnuts",
+       "amount": 15
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Wed": {
+   "label": "Wednesday (legs)",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 225
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      },
+      {
+       "ingredient": "brazil",
+       "amount": 5
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "bolo"
+      },
+      {
+       "ingredient": "spaghetti",
+       "amount": 100
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "curry"
+      },
+      {
+       "ingredient": "avocado",
+       "amount": 70
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Thu": {
+   "label": "Thursday",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "dal"
+      },
+      {
+       "recipe": "rice",
+       "portions": 4
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "chili"
+      },
+      {
+       "ingredient": "oil",
+       "amount": 15
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Fri": {
+   "label": "Friday",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      },
+      {
+       "ingredient": "brazil",
+       "amount": 5
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "chili"
+      },
+      {
+       "recipe": "rice",
+       "portions": 4
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "curry"
+      },
+      {
+       "ingredient": "avocado",
+       "amount": 70
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Sat": {
+   "label": "Saturday",
+   "type": "training",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout plate",
+     "time": "15:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "dal"
+      },
+      {
+       "recipe": "rice",
+       "portions": 4
+      }
+     ]
+    },
+    {
+     "name": "Pre-workout drink",
+     "time": "17:00",
+     "parts": [
+      {
+       "recipe": "pump"
+      }
+     ]
+    },
+    {
+     "name": "Intra-workout",
+     "time": "18:00",
+     "parts": [
+      {
+       "recipe": "intra"
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake",
+     "time": "19:30",
+     "parts": [
+      {
+       "recipe": "pwo"
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "bolo"
+      },
+      {
+       "ingredient": "walnuts",
+       "amount": 15
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  },
+  "Sun": {
+   "label": "Sunday",
+   "type": "rest",
+   "meals": [
+    {
+     "name": "Oat bowl",
+     "time": "07:30",
+     "parts": [
+      {
+       "recipe": "oat_bowl"
+      }
+     ]
+    },
+    {
+     "name": "Snack",
+     "time": "10:30",
+     "parts": [
+      {
+       "ingredient": "kiwi",
+       "amount": 150
+      },
+      {
+       "ingredient": "almonds",
+       "amount": 20
+      }
+     ]
+    },
+    {
+     "name": "Lunch",
+     "time": "12:30",
+     "parts": [
+      {
+       "recipe": "salad"
+      },
+      {
+       "recipe": "chili"
+      },
+      {
+       "recipe": "rice",
+       "portions": 3
+      }
+     ]
+    },
+    {
+     "name": "Post-workout shake + kiwi",
+     "time": "16:00",
+     "parts": [
+      {
+       "recipe": "pwo"
+      },
+      {
+       "ingredient": "kiwi",
+       "amount": 75
+      }
+     ]
+    },
+    {
+     "name": "Main meal",
+     "time": "19:00",
+     "parts": [
+      {
+       "recipe": "curry"
+      },
+      {
+       "ingredient": "avocado",
+       "amount": 70
+      }
+     ]
+    },
+    {
+     "name": "Night shake",
+     "time": "22:00",
+     "parts": [
+      {
+       "recipe": "night"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "week_overrides": {
+  "2": {
+   "Sat": {
+    "label": "Saturday",
+    "type": "training",
+    "meals": [
+     {
+      "name": "Oat bowl",
+      "time": "07:30",
+      "parts": [
+       {
+        "recipe": "oat_bowl"
+       }
+      ]
+     },
+     {
+      "name": "Snack",
+      "time": "10:30",
+      "parts": [
+       {
+        "ingredient": "kiwi",
+        "amount": 150
+       },
+       {
+        "ingredient": "almonds",
+        "amount": 20
+       }
+      ]
+     },
+     {
+      "name": "Pre-workout plate",
+      "time": "15:30",
+      "parts": [
+       {
+        "recipe": "salad"
+       },
+       {
+        "recipe": "chili"
+       },
+       {
+        "recipe": "rice",
+        "portions": 4
+       }
+      ]
+     },
+     {
+      "name": "Pre-workout drink",
+      "time": "17:00",
+      "parts": [
+       {
+        "recipe": "pump"
+       }
+      ]
+     },
+     {
+      "name": "Intra-workout",
+      "time": "18:00",
+      "parts": [
+       {
+        "recipe": "intra"
+       }
+      ]
+     },
+     {
+      "name": "Post-workout shake",
+      "time": "19:30",
+      "parts": [
+       {
+        "recipe": "pwo"
+       }
+      ]
+     },
+     {
+      "name": "Main meal",
+      "time": "12:30",
+      "parts": [
+       {
+        "recipe": "curry"
+       },
+       {
+        "ingredient": "avocado",
+        "amount": 70
+       }
+      ]
+     },
+     {
+      "name": "Night shake",
+      "time": "22:00",
+      "parts": [
+       {
+        "recipe": "night"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "4": {
+   "Sat": {
+    "label": "Saturday",
+    "type": "training",
+    "meals": [
+     {
+      "name": "Oat bowl",
+      "time": "07:30",
+      "parts": [
+       {
+        "recipe": "oat_bowl"
+       }
+      ]
+     },
+     {
+      "name": "Snack",
+      "time": "10:30",
+      "parts": [
+       {
+        "ingredient": "kiwi",
+        "amount": 150
+       },
+       {
+        "ingredient": "almonds",
+        "amount": 20
+       }
+      ]
+     },
+     {
+      "name": "Pre-workout plate",
+      "time": "15:30",
+      "parts": [
+       {
+        "recipe": "salad"
+       },
+       {
+        "recipe": "chili"
+       },
+       {
+        "recipe": "rice",
+        "portions": 4
+       }
+      ]
+     },
+     {
+      "name": "Pre-workout drink",
+      "time": "17:00",
+      "parts": [
+       {
+        "recipe": "pump"
+       }
+      ]
+     },
+     {
+      "name": "Intra-workout",
+      "time": "18:00",
+      "parts": [
+       {
+        "recipe": "intra"
+       }
+      ]
+     },
+     {
+      "name": "Post-workout shake",
+      "time": "19:30",
+      "parts": [
+       {
+        "recipe": "pwo"
+       }
+      ]
+     },
+     {
+      "name": "Main meal",
+      "time": "12:30",
+      "parts": [
+       {
+        "recipe": "curry"
+       },
+       {
+        "ingredient": "avocado",
+        "amount": 70
+       }
+      ]
+     },
+     {
+      "name": "Night shake",
+      "time": "22:00",
+      "parts": [
+       {
+        "recipe": "night"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "cycle": {
+  "weeks": 4,
+  "start_date": "2026-11-02",
+  "sessions": [
+   {
+    "label": "Sunday A",
+    "weeks": [
+     1,
+     3
+    ],
+    "day": "Sun",
+    "prior": true,
+    "cook": {
+     "dal": 1,
+     "chili": 1,
+     "curry": 1,
+     "bolo": 1,
+     "rice": 1
+    }
+   },
+   {
+    "label": "Sunday B",
+    "weeks": [
+     2,
+     4
+    ],
+    "day": "Sun",
+    "prior": true,
+    "cook": {
+     "chili": 1,
+     "curry": 1,
+     "rice": 1
+    }
+   }
+  ]
+ },
+ "shopping": {
+  "stock_run": {
+   "day": "Sat",
+   "prior": true,
+   "label": "Stock-up",
+   "store": "REWE + online"
+  },
+  "fresh_runs": [
+   {
+    "day": "Sat",
+    "prior": true,
+    "label": "Weekly fresh run",
+    "store": "REWE + Lidl",
+    "covers": [
+     "Mon",
+     "Tue",
+     "Wed",
+     "Thu",
+     "Fri",
+     "Sat",
+     "Sun"
+    ]
+   }
+  ],
+  "batch_label": "Batch shop"
+ }
+}

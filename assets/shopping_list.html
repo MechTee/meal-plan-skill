@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of dated shop runs, the next one opened and marked; ticks per run and cycle. */
+:root{
+  --bg:#F4F6F2; --surface:#FFFFFF; --fg:#1A1E1B; --muted:#5B645D; --line:#D9DFD6; --tint:#E9EDE6;
+  --accent:__ACCENT_L__; --accent-ink:#FFFFFF; --good:#2E7D45; --low:#B23A2A;
+  --font-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --font-body:"Atkinson Hyperlegible","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111412; --surface:#191D1A; --fg:#E8ECE6; --muted:#9BA59C; --line:#2C332E; --tint:#202621;
+  --accent:__ACCENT_D__; --accent-ink:#111412; --good:#6BC383; --low:#F08670; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111412; --surface:#191D1A; --fg:#E8ECE6; --muted:#9BA59C; --line:#2C332E; --tint:#202621;
+  --accent:__ACCENT_D__; --accent-ink:#111412; --good:#6BC383; --low:#F08670; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+h1{font-size:clamp(1.9rem,6vw,2.5rem);font-weight:800;line-height:1.05}
+h2{font-size:1.2rem;font-weight:600}
+.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.desc{margin:0;color:var(--muted);max-width:62ch}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.readout div{display:flex;flex-direction:column;min-width:0}
+.readout b{font-family:var(--font-num);font-size:1.4rem;font-weight:600}
+.readout span{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+@media (max-width:520px){.readout{grid-template-columns:1fr 1fr}}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 13px;font-size:.88rem}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.runs{display:flex;flex-direction:column;gap:12px}
+details.run{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+details.run.next{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+details.run.done summary .date{color:var(--muted);text-decoration:line-through}
+summary{list-style:none;cursor:pointer;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+.date{font-family:var(--font-display);font-weight:600;font-size:1.1rem}
+.when{font-size:.85rem;color:var(--muted)}
+.tag{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--tint);color:var(--muted);margin-left:6px;vertical-align:2px}
+.tag.next{background:var(--accent);color:var(--accent-ink)}
+.prog{font-family:var(--font-num);font-size:.9rem;text-align:right;white-space:nowrap}
+.meter{grid-column:1/-1;height:4px;background:var(--tint);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.body{padding:0 16px 14px}
+.grp{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:14px 0 4px}
+ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+li{border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 2px;cursor:pointer}
+.row input{appearance:none;width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;margin:2px 0 0;display:grid;place-items:center;cursor:pointer;background:var(--surface)}
+.row input:checked{background:var(--accent);border-color:var(--accent)}
+.row input:checked::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.row.done .txt{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.qty{font-family:var(--font-num);font-weight:600;white-space:nowrap;text-align:right}
+.qty small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.note{display:block;font-size:.84rem;color:var(--muted)}
+.note a{color:inherit}
+.skip .txt{color:var(--muted)}
+.foot{font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:10px}
+.foot button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-size:.84rem}
+section.ref{display:flex;flex-direction:column;gap:10px}
+.ref dl{margin:0;display:flex;flex-direction:column;gap:10px}
+.ref dt{font-weight:700}
+.ref dd{margin:0;color:var(--muted);font-size:.95rem}
+.notes{margin:0;padding-left:1.1em;color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="title"></h1>
+    <p class="desc" id="desc"></p>
+    <div class="readout" id="readout"></div>
+  </header>
+  <div class="bar" role="group" aria-label="Cycle" id="cycles"></div>
+  <div class="bar" role="group" aria-label="Show" id="filters"></div>
+  <div class="runs" id="runs"></div>
+  <section class="ref" id="refSec">
+    <h2>Batch recipes · quick reference</h2>
+    <dl id="ref"></dl>
+  </section>
+  <section class="ref" id="notesSec">
+    <h2>Notes</h2>
+    <ul class="notes" id="notes" style="border:0"></ul>
+  </section>
+</div>
+<script>
+const S = __DATA__;
+const KEY = "shop:" + (S.id || "plan");
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e){ return {}; } },
+  set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
+};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cur = S.currency || "EUR";
+const money = v => v == null ? "" : new Intl.NumberFormat(S.locale || "de-DE", {style:"currency", currency:cur}).format(v);
+const DAY = 864e5;
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const W = S.cycleWeeks || 4;
+const today = new Date(); today.setHours(0,0,0,0);
+
+function cycleOf(date){ const c = Math.floor((date - parse(S.runs[0].date)) / (7*W*DAY)) + 1; return Math.max(1, c); }
+let state = Object.assign({ticks:{}, cycle: cycleOf(today), filter:"upcoming"}, store.get());
+const shift = (d, c) => new Date(parse(d).getTime() + (c-1)*7*W*DAY);
+const fmtDate = d => d.toLocaleDateString(S.locale || "en-GB", {weekday:"short", day:"numeric", month:"short"});
+
+$("eyebrow").textContent = S.eyebrow || "Shopping list";
+$("title").textContent = S.title;
+$("desc").textContent = S.desc || "";
+$("readout").innerHTML = `
+  <div><b>${money(S.costs.weekly)}</b><span>per week</span></div>
+  <div><b>${money(S.costs.cycle)}</b><span>per ${W}-week cycle</span></div>
+  <div><b>${money(S.costs.firstTill)}</b><span>first cycle at the till</span></div>`;
+
+function renderCycles(){
+  const n = Math.max(4, state.cycle + 1);
+  $("cycles").innerHTML = `<span class="eyebrow">Cycle</span>` + Array.from({length:n}, (_,i)=>i+1).map(c => {
+    const a = shift(S.runs[0].date, c), b = new Date(a.getTime() + (7*W-1)*DAY);
+    return `<button class="chip" type="button" aria-pressed="${c===state.cycle}" data-c="${c}">${c} · ${a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}–${b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}</button>`;
+  }).join("");
+  $("cycles").querySelectorAll("button").forEach(b => b.onclick = () => { state.cycle = +b.dataset.c; store.set(state); render(); });
+}
+const FILTERS = [["upcoming","Upcoming"],["all","All runs"],["stock","Stock-up"],["batch","Batch shops"],["fresh","Fresh runs"]];
+function renderFilters(){
+  $("filters").innerHTML = `<span class="eyebrow">Show</span>` + FILTERS.map(([k,l]) => `<button class="chip" type="button" aria-pressed="${k===state.filter}" data-f="${k}">${l}</button>`).join("");
+  $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { state.filter = b.dataset.f; store.set(state); render(); });
+}
+function packsFor(it){
+  const seq = it.packs_by_cycle || [];
+  if (!seq.length) return it.packs;
+  return seq[Math.min(state.cycle-1, seq.length-1)];
+}
+function render(){
+  renderCycles(); renderFilters();
+  const runs = S.runs.map(r => ({...r, d: shift(r.date, state.cycle)}));
+  const nextIdx = runs.findIndex(r => r.d >= today);
+  const html = runs.map((r, idx) => {
+    if (state.filter === "upcoming" && r.d < today && idx !== nextIdx) return "";
+    if (["stock","batch","fresh"].includes(state.filter) && r.kind !== state.filter) return "";
+    const tk = state.ticks[`${state.cycle}:${r.id}`] || {};
+    const items = r.items.filter(it => (packsFor(it) ?? 1) > 0);
+    const done = items.filter(it => tk[it.key]).length;
+    const groups = {};
+    r.items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
+    const body = Object.entries(groups).map(([g, list]) => `<div class="grp">${esc(g)}</div><ul>` + list.map(it => {
+      const p = packsFor(it), skip = p === 0, on = !!tk[it.key];
+      const qty = skip ? "skip" : (p == null ? `${Math.round(it.need)} ${it.unit}` : `${p} ×`);
+      const sub = skip ? `have enough` : (it.pack_label ? esc(it.pack_label) : "");
+      const bits = [];
+      if (it.cost && !skip) bits.push(money(it.cost));
+      if (it.store) bits.push(esc(it.store));
+      bits.push(`uses ${Math.round(it.need).toLocaleString()} ${it.unit}`);
+      if (it.alternating) bits.push(esc(it.alternating));
+      if (it.lasts_cycles && it.lasts_cycles >= 1.5) bits.push(`one pack lasts ~${it.lasts_cycles} cycles`);
+      if (it.note) bits.push(esc(it.note));
+      if (it.link) bits.push(`<a href="${esc(it.link)}" target="_blank" rel="noopener">link</a>`);
+      return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-label="Got it"><span class="txt">${esc(it.name)}<span class="note">${bits.join(" · ")}</span></span><span class="qty">${qty}<small>${sub}</small></span></label></li>`;
+    }).join("") + `</ul>`).join("");
+    const isNext = idx === nextIdx, isDone = items.length && done === items.length;
+    const open = isNext || state.filter !== "upcoming" && state.filter !== "all" ? "open" : "";
+    return `<details class="run${isNext?" next":""}${isDone?" done":""}" ${open}>
+      <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(r.cost)}</span></span>
+      <span class="prog">${done}/${items.length}</span><span class="meter"><i style="width:${items.length?done/items.length*100:0}%"></i></span></summary>
+      <div class="body">${body}<div class="foot"><span>${esc(r.note || "")}</span><button type="button" data-clear="${esc(r.id)}">Clear ticks</button></div></div></details>`;
+  }).join("");
+  $("runs").innerHTML = html || `<p class="desc">No runs to show in this view.</p>`;
+  $("runs").querySelectorAll("input[type=checkbox]").forEach(cb => cb.onchange = () => {
+    const k = `${state.cycle}:${cb.dataset.run}`;
+    state.ticks[k] = state.ticks[k] || {};
+    state.ticks[k][cb.dataset.k] = cb.checked; store.set(state); render();
+  });
+  $("runs").querySelectorAll("[data-clear]").forEach(b => b.onclick = e => { e.preventDefault(); delete state.ticks[`${state.cycle}:${b.dataset.clear}`]; store.set(state); render(); });
+}
+$("refSec").hidden = !(S.recipes && S.recipes.length);
+$("ref").innerHTML = (S.recipes || []).map(r => `<div><dt>${esc(r.title)}</dt><dd>${esc(r.line)}</dd></div>`).join("");
+$("notesSec").hidden = !(S.notes && S.notes.length);
+$("notes").innerHTML = (S.notes || []).map(n => `<li>${esc(n)}</li>`).join("");
+render();
+</script>
+</body>
+</html>

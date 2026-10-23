@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: depth-picker-first
+expected_outcome: |
+  Before any plan or numbers, the run asks the depth picker: seven topics (goal, body composition,
+  training/lifestyle, preferences/restrictions, cooking, pre-workout process, sourcing/shopping),
+  each with Skip / Quick / Standard / Deep dive options, via AskUserQuestion in two calls (4 + 3).

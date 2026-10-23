@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single kitchen-counter column — macro readout up top, ingredients → prep → steps to work through, amino acids and micros as the reference footer. */
+:root{
+  --bg:#F4F6F2; --surface:#FFFFFF; --fg:#1A1E1B; --muted:#5B645D; --line:#D9DFD6; --tint:#E9EDE6;
+  --accent:__ACCENT_L__; --accent-ink:#FFFFFF;
+  --good:#2E7D45; --warn:#A86A00; --low:#B23A2A;
+  --font-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-num:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111412; --surface:#191D1A; --fg:#E8ECE6; --muted:#9BA59C; --line:#2C332E; --tint:#202621;
+  --accent:__ACCENT_D__; --accent-ink:#111412; --good:#6BC383; --warn:#E3B04F; --low:#F08670; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111412; --surface:#191D1A; --fg:#E8ECE6; --muted:#9BA59C; --line:#2C332E; --tint:#202621;
+  --accent:__ACCENT_D__; --accent-ink:#111412; --good:#6BC383; --warn:#E3B04F; --low:#F08670; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:17px;line-height:1.5;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--font-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(1.9rem,6vw,2.6rem);font-weight:800;line-height:1.05;letter-spacing:-.01em}
+h2{font-size:1.25rem;font-weight:600;display:flex;align-items:baseline;gap:10px}
+h2 .count{font-family:var(--font-num);font-size:.8rem;color:var(--muted);font-weight:400}
+.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+header{display:flex;flex-direction:column;gap:14px}
+.toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.meta{color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.95rem}
+.meta span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--accent);margin-right:7px;vertical-align:1px}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.chipbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 13px;font-size:.88rem}
+.chipbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:7px 12px;font-size:.9rem;text-align:left}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:auto 1fr;gap:12px 22px;align-items:center}
+.kcal{display:flex;flex-direction:column}
+.kcal b{font-family:var(--font-num);font-size:2.6rem;line-height:1;font-weight:600}
+.kcal small{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}
+.macros{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.macro{display:flex;flex-direction:column;gap:2px;min-width:0}
+.macro b{font-family:var(--font-num);font-size:1.35rem;font-weight:600}
+.macro b i{font-style:normal;font-size:.8rem;color:var(--muted);margin-left:2px}
+.macro span{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.split{grid-column:1/-1;display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--tint)}
+.split div{height:100%}
+.split .p{background:var(--accent)} .split .c{background:color-mix(in srgb,var(--accent) 45%,var(--tint))} .split .f{background:color-mix(in srgb,var(--fg) 55%,var(--tint))}
+.sub{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.85rem;color:var(--muted)}
+.sub .key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+@media (max-width:520px){.readout{grid-template-columns:1fr}.macros{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.desc{max-width:62ch;margin:0;color:var(--fg)}
+
+/* lists */
+section{display:flex;flex-direction:column;gap:12px}
+.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.list li{border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:11px 2px;cursor:pointer}
+.row input{appearance:none;width:22px;height:22px;border:2px solid var(--muted);border-radius:6px;margin:2px 0 0;display:grid;place-items:center;cursor:pointer;background:var(--surface)}
+.row input:checked{background:var(--accent);border-color:var(--accent)}
+.row input:checked::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.row.done .txt{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.amt{font-family:var(--font-num);font-weight:600;white-space:nowrap;text-align:right}
+.note{display:block;font-size:.85rem;color:var(--muted)}
+.steps .row{grid-template-columns:28px 30px minmax(0,1fr)}
+.stepn{font-family:var(--font-num);color:var(--accent);font-weight:600;padding-top:1px}
+.timer{margin-top:7px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:3px 12px;font-family:var(--font-num);font-size:.88rem}
+.timer.run{background:var(--accent);color:var(--accent-ink)}
+.timer.ring{animation:ring 1s steps(2) infinite}
+@keyframes ring{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.timer.ring{animation:none;text-decoration:underline}}
+.prep{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:8px}
+.prep li::marker{color:var(--accent)}
+
+/* amino acids */
+.aa{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:14px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border-radius:8px;padding:8px 11px;background:var(--tint);display:flex;flex-direction:column;gap:1px;min-width:0}
+.pill b{font-family:var(--font-num);font-size:1.1rem}
+.pill span{font-size:.78rem;color:var(--muted)}
+.pill.good b{color:var(--good)} .pill.warn b{color:var(--warn)} .pill.low b{color:var(--low)}
+.aatable{width:100%;border-collapse:collapse;font-size:.92rem}
+.aatable th{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;font-weight:700;padding:0 6px 6px 0}
+.aatable td{padding:5px 6px 5px 0;border-top:1px solid var(--line);vertical-align:middle}
+.aatable td.r,.aatable th.r{text-align:right;white-space:nowrap}
+@media (max-width:520px){.aatable .vs{display:none}}
+.aatable tr.lim td{color:var(--low);font-weight:700}
+.bar{position:relative;height:10px;background:var(--tint);border-radius:5px;min-width:80px}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--accent)}
+.bar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);left:66.67%}
+tr.lim .bar i{background:var(--low)}
+.scroll{overflow-x:auto}
+.fine{font-size:.82rem;color:var(--muted);margin:0;max-width:70ch}
+
+/* notes + footer */
+.notes{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:8px;max-width:66ch}
+footer{border-top:2px solid var(--fg);padding-top:16px;display:flex;flex-direction:column;gap:14px}
+.micros{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px 18px}
+.mi{display:flex;flex-direction:column;gap:3px;min-width:0}
+.mi .top{display:flex;justify-content:space-between;gap:6px;font-size:.84rem}
+.mi .top span{color:var(--muted)}
+.mi .top b{font-family:var(--font-num);font-weight:600;white-space:nowrap}
+.mi .mbar{height:4px;background:var(--tint);border-radius:2px;overflow:hidden}
+.mi .mbar i{display:block;height:100%;background:var(--accent)}
+.mi small{font-family:var(--font-num);font-size:.72rem;color:var(--muted)}
+.sources{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.sources a{color:inherit}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="toprow">
+      <div class="eyebrow" id="kind"></div>
+      <div class="tools">
+        <button class="chipbtn" id="wake" aria-pressed="false" type="button">Keep screen on</button>
+        <button class="chipbtn" id="reset" type="button">Clear ticks</button>
+      </div>
+    </div>
+    <h1 id="title"></h1>
+    <div class="meta" id="meta"></div>
+    <p class="desc" id="desc"></p>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Variant"></div>
+    <div class="readout" id="readout"></div>
+  </header>
+
+  <section id="ingSec">
+    <h2>Ingredients <span class="count" id="ingCount"></span></h2>
+    <ul class="list" id="ing"></ul>
+  </section>
+
+  <section id="prepSec">
+    <h2>Prep</h2>
+    <ol class="prep" id="prep"></ol>
+  </section>
+
+  <section>
+    <h2>Steps</h2>
+    <ul class="list steps" id="steps"></ul>
+  </section>
+
+  <section>
+    <h2>Amino acid profile</h2>
+    <div class="aa" id="aa"></div>
+  </section>
+
+  <section id="notesSec">
+    <h2>Notes</h2>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <footer>
+    <div class="eyebrow" id="microHead">Micronutrients</div>
+    <div class="micros" id="micros"></div>
+    <p class="fine" id="refNote"></p>
+    <div class="sources" id="sources"></div>
+  </footer>
+</div>
+
+<script>
+const D = __DATA__;
+const KEY = "cook:" + D.id;
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch(e){ return {}; } },
+  set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
+};
+let state = Object.assign({variant: Object.keys(D.variants)[0], ticks: {}}, store.get());
+if (!D.variants[state.variant]) state.variant = Object.keys(D.variants)[0];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = (v, d=0) => (Math.round(v * 10**d) / 10**d).toLocaleString("en-GB", {minimumFractionDigits:d, maximumFractionDigits:d});
+
+$("title").textContent = D.title;
+$("kind").textContent = D.kind;
+$("desc").textContent = D.desc;
+$("meta").innerHTML = `<span>${esc(D.when)}</span><span>${esc(D.serves)}</span>`;
+
+function renderTabs(){
+  const names = Object.keys(D.variants);
+  $("tabs").hidden = names.length < 2;
+  $("tabs").innerHTML = names.map(n => `<button role="tab" type="button" aria-selected="${n===state.variant}" data-v="${esc(n)}">${esc(n)}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { state.variant = b.dataset.v; store.set(state); render(); });
+}
+
+function renderReadout(n){
+  const pe = n.protein_g*4, ce = n.carb_g*4, fe = n.fat_g*9, t = pe+ce+fe || 1;
+  $("readout").innerHTML = `
+    <div class="kcal"><b>${fmt(n.kcal)}</b><small>kcal</small></div>
+    <div class="macros">
+      <div class="macro"><b>${fmt(n.protein_g,1)}<i>g</i></b><span>Protein</span></div>
+      <div class="macro"><b>${fmt(n.carb_g,1)}<i>g</i></b><span>Carbs</span></div>
+      <div class="macro"><b>${fmt(n.fat_g,1)}<i>g</i></b><span>Fat</span></div>
+      <div class="macro"><b>${fmt(n.fiber_g,1)}<i>g</i></b><span>Fibre</span></div>
+    </div>
+    <div class="split" aria-hidden="true"><div class="p" style="width:${pe/t*100}%"></div><div class="c" style="width:${ce/t*100}%"></div><div class="f" style="width:${fe/t*100}%"></div></div>
+    <div class="sub">
+      <span><span class="key" style="background:var(--accent)"></span>Protein ${fmt(pe/t*100)} %</span>
+      <span><span class="key" style="background:color-mix(in srgb,var(--accent) 45%,var(--tint))"></span>Carbs ${fmt(ce/t*100)} %</span>
+      <span><span class="key" style="background:color-mix(in srgb,var(--fg) 55%,var(--tint))"></span>Fat ${fmt(fe/t*100)} %</span>
+      <span>of which sugars ${fmt(n.sugar_g,1)} g · saturates ${fmt(n.satfat_g,1)} g</span>
+    </div>`;
+}
+
+function tickRow(id, inner){
+  const on = !!state.ticks[id];
+  return `<li><label class="row${on?" done":""}" data-id="${id}"><input type="checkbox" ${on?"checked":""} aria-label="Done">${inner}</label></li>`;
+}
+function bindTicks(root){
+  root.querySelectorAll("label.row").forEach(l => {
+    const cb = l.querySelector("input");
+    cb.onchange = () => { state.ticks[l.dataset.id] = cb.checked; l.classList.toggle("done", cb.checked); store.set(state); };
+  });
+}
+
+function renderIng(){
+  const list = D.ing["*"] || D.ing[state.variant] || [];
+  $("ingCount").textContent = list.length + " items";
+  $("ing").innerHTML = list.map((x,i) => tickRow("i"+i+":"+x[0],
+    `<span class="txt">${esc(x[0])}${x[2]?`<span class="note">${esc(x[2])}</span>`:""}</span><span class="amt">${esc(x[1])}</span>`)).join("");
+  bindTicks($("ing"));
+}
+
+function renderPrep(){
+  $("prepSec").hidden = !D.prep.length;
+  $("prep").innerHTML = D.prep.map(p => `<li>${esc(p)}</li>`).join("");
+}
+
+const timers = {};
+function renderSteps(){
+  $("steps").innerHTML = D.steps.map((s,i) => tickRow("s"+i,
+    `<span class="stepn">${i+1}</span><span class="txt">${esc(s[0])}${s[1]?`<br><button type="button" class="timer" data-i="${i}" data-m="${s[1]}">▶ ${s[1]} min</button>`:""}</span>`)).join("");
+  bindTicks($("steps"));
+  $("steps").querySelectorAll(".timer").forEach(b => b.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); toggleTimer(b); }));
+}
+let audio;
+function beep(){
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    [0, .35, .7].forEach(t => { const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = 880; g.gain.value = .15; o.connect(g); g.connect(audio.destination);
+      o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .2); });
+  } catch(e){}
+  try { navigator.vibrate && navigator.vibrate([300,150,300]); } catch(e){}
+}
+function toggleTimer(b){
+  const i = b.dataset.i, m = +b.dataset.m;
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+  if (timers[i]) { clearInterval(timers[i]); delete timers[i]; b.className = "timer"; b.textContent = `▶ ${m} min`; return; }
+  const end = Date.now() + m*60000;
+  b.className = "timer run";
+  const tick = () => {
+    const left = Math.max(0, Math.round((end - Date.now())/1000));
+    if (left === 0 && !b.classList.contains("ring")) { b.className = "timer ring"; b.textContent = "Done · tap to reset"; beep(); return; }
+    if (left > 0) b.textContent = `■ ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;
+  };
+  tick(); timers[i] = setInterval(tick, 500);
+}
+
+const AAROWS = [["his","Histidine",["his"]],["ile","Isoleucine",["ile"]],["leu","Leucine",["leu"]],["lys","Lysine",["lys"]],
+  ["saa","Methionine + cysteine",["met","cys"]],["aaa","Phenylalanine + tyrosine",["phe","tyr"]],["thr","Threonine",["thr"]],
+  ["trp","Tryptophan",["trp"]],["val","Valine",["val"]]];
+const NAMES = {his:"histidine",ile:"isoleucine",leu:"leucine",lys:"lysine",saa:"methionine + cysteine",aaa:"phenylalanine + tyrosine",thr:"threonine",trp:"tryptophan",val:"valine"};
+
+function renderAA(v){
+  const n = v.n, sc = v.score;
+  if (!sc) { $("aa").innerHTML = `<p class="fine" style="font-size:.95rem;color:var(--fg)">${esc(D.noProtein || "No meaningful protein in this one, so there is no amino acid profile to score.")}</p>`; return; }
+  const p = n.protein_g, leu = v.aa.leu, small = p < 12;
+  const lo = D.bw*0.3, hi = D.bw*0.4;
+  const pCls = small ? "" : p >= hi ? "good" : p >= lo ? "warn" : "low";
+  const lCls = small ? "" : leu >= 2.5 ? "good" : leu >= 2.0 ? "warn" : "low";
+  const dCls = small ? "" : sc.diaas_est >= 100 ? "good" : sc.diaas_est >= 75 ? "warn" : "low";
+  const rows = AAROWS.map(([k,label,parts]) => {
+    const g = parts.reduce((a,x)=>a+v.aa[x],0), s = sc.scores[k], w = Math.min(s,150)/150*100;
+    return `<tr class="${k===sc.limiting && s<100 ?"lim":""}"><td>${label}</td><td class="r num">${fmt(g,2)} g</td><td class="r num">${s} %</td><td style="width:38%"><div class="bar"><i style="width:${w}%"></i><em title="100 % of FAO pattern"></em></div></td></tr>`;
+  }).join("");
+  $("aa").innerHTML = `
+    <div class="pills">
+      <div class="pill ${pCls}"><b>${fmt(p,1)} g</b><span>protein · target ${fmt(lo)}–${fmt(hi)} g</span></div>
+      <div class="pill ${lCls}"><b>${fmt(leu,2)} g</b><span>leucine · target ≥ 2.5 g</span></div>
+      <div class="pill ${dCls}"><b>~${sc.diaas_est}</b><span>est. DIAAS · limiting: ${NAMES[sc.limiting]}</span></div>
+    </div>
+    ${small ? `<p class="fine" style="color:var(--fg)">${esc(D.smallNote || "A small protein contribution. Scored for completeness; the day's shakes and main meals carry the protein.")}</p>` : ""}
+    <div class="scroll"><table class="aatable">
+      <thead><tr><th>Essential amino acid</th><th class="r">Amount</th><th class="r">Score</th><th><span class="vs">vs FAO pattern</span> <span class="vs" style="font-weight:400;text-transform:none;letter-spacing:0">(line = 100 %)</span></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <p class="fine">Amount is total grams in this ${esc(D.unit)}. Score is digestible amino acid per gram of protein against the FAO 2013 pattern for adults, using the per-ingredient digestibility factors from the plan’s ingredient table. The lowest score is the estimated DIAAS. Protein target is 0.3–0.4 g/kg at ${D.bw} kg.${D.aaNote ? " " + esc(D.aaNote) : ""}</p>`;
+}
+
+const MICROS = [["fiber_g","Fibre","g",30,1],["sodium_mg","Sodium","mg",1500,0],["potassium_mg","Potassium","mg",4000,0],["calcium_mg","Calcium","mg",1000,0],
+  ["magnesium_mg","Magnesium","mg",350,0],["phosphorus_mg","Phosphorus","mg",700,0],["iron_mg","Iron","mg",11,1],["zinc_mg","Zinc","mg",14,1],
+  ["selenium_ug","Selenium","µg",70,0],["iodine_ug","Iodine","µg",200,0],["vitA_rae_ug","Vitamin A","µg RAE",850,0],["vitC_mg","Vitamin C","mg",110,0],
+  ["vitD_ug","Vitamin D","µg",20,1],["vitE_mg","Vitamin E","mg",14,1],["vitK_ug","Vitamin K","µg",70,0],["thiamin_mg","Thiamin B1","mg",1.2,2],
+  ["riboflavin_mg","Riboflavin B2","mg",1.4,2],["niacin_mg","Niacin B3","mg",15,1],["b6_mg","Vitamin B6","mg",1.6,2],["folate_ug","Folate","µg",300,0],
+  ["b12_ug","Vitamin B12","µg",4,1]];
+function renderMicros(v){
+  const n = v.n, ms = v.mshare || {};
+  let html = MICROS.map(([k,label,u,ref,d]) => {
+    const val = n[k] || 0, sh = ms[k] || 0;
+    let shown;
+    if (sh >= 0.9 && val < 1e-6) shown = "–";
+    else shown = (sh > 0.1 ? "≥ " : "") + fmt(val,d) + " " + u;
+    const r = (D.refs && D.refs[k] != null) ? D.refs[k] : ref;
+    const pct = shown === "–" ? 0 : val/r*100;
+    return `<div class="mi"><div class="top"><span>${label}</span><b>${shown}</b></div><div class="mbar"><i style="width:${Math.min(pct,100)}%"></i></div><small>${shown==="–"?"no data":fmt(pct)+" %"}</small></div>`;
+  }).join("");
+  if (n.nitrate_mg > 5) html += `<div class="mi"><div class="top"><span>Nitrate</span><b>${fmt(n.nitrate_mg)} mg</b></div><div class="mbar"><i style="width:${Math.min(n.nitrate_mg/800*100,100)}%"></i></div><small>target 500–800 mg</small></div>`;
+  $("micros").innerHTML = html;
+  $("microHead").textContent = "Micronutrients · " + state.variant;
+  $("refNote").textContent = (D.refLabel || "Bars show % of the D-A-CH daily reference for adults.") + " “≥” means some ingredients have no data for that nutrient, so the real value is higher. “–” means no data at all.";
+}
+
+function render(){
+  const v = D.variants[state.variant];
+  renderTabs(); renderReadout(v.n); renderIng(); renderAA(v); renderMicros(v);
+}
+renderPrep(); renderSteps();
+const SRC = D.sources || [["USDA FoodData Central","https://fdc.nal.usda.gov/"],["Open Food Facts","https://world.openfoodfacts.org/"],["FAO 2013 scoring pattern","https://openknowledge.fao.org/handle/20.500.14283/i3124e"]];
+$("sources").innerHTML = "<span>Data:</span>" + SRC.map(s => `<a href="${esc(s[1])}" target="_blank" rel="noopener">${esc(s[0])}</a>`).join("");
+$("notesSec").hidden = !D.notes.length;
+$("notes").innerHTML = D.notes.map(x => `<li>${esc(x)}</li>`).join("");
+render();
+
+$("reset").onclick = () => { state.ticks = {}; store.set(state); renderIng(); renderSteps(); };
+let lock = null;
+$("wake").onclick = async () => {
+  const b = $("wake");
+  if (lock) { try { await lock.release(); } catch(e){} lock = null; b.setAttribute("aria-pressed","false"); b.textContent = "Keep screen on"; return; }
+  try { lock = await navigator.wakeLock.request("screen"); b.setAttribute("aria-pressed","true"); b.textContent = "Screen stays on";
+        lock.addEventListener("release", () => { lock = null; b.setAttribute("aria-pressed","false"); b.textContent = "Keep screen on"; }); }
+  catch(e){ b.textContent = "Screen lock not available here"; }
+};
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible" && $("wake").getAttribute("aria-pressed") === "true" && !lock) {
+    try { lock = await navigator.wakeLock.request("screen"); } catch(e){}
+  }
+});
+</script>
+</body>
+</html>

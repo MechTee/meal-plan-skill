@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: unattended-vegan-rower
+expected_outcome: |
+  Without asking questions, the run states the defaults it assumed, computes targets for a
+  59 kg female endurance athlete on a vegan diet (endurance-level carbs, B12/iodine/iron/zinc/
+  calcium/vitamin D flagged), keeps freezer use within ~12 containers, and produces the workbook
+  (Week summary, Micros, EAA, Ingredients, Mon..Sun, recalculated with no errors), a dated
+  shopping list for Lidl/dm, batch recipe pages, cook-day page(s) and recipe handout pages, all
+  generated from one plan.json, with the scratchpad summarised at the top of the hand-over.

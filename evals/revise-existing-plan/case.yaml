@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: revise-existing-plan
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  The run edits plan.json (curry: tofu ingredient added with real-ish values and source, chunks
+  removed; Wed type rest with a rest-day meal structure; Sun training), runs the check before and
+  after, reports the before→after numbers that moved (curry portion macros, Wed/Sun day totals,
+  batch balance, cost), then rebuilds the workbook (0 recalc errors) and re-renders the curry page,
+  cook-day pages and shopping list — without hand-editing outputs.

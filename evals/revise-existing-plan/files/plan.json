@@ -3564,12 +3564,19 @@
    {
     "day": "Sat",
     "prior": true,
-    "label": "Weekly fresh run",
+    "label": "Weekend fresh run",
     "store": "REWE + Lidl",
     "covers": [
      "Mon",
      "Tue",
-     "Wed",
+     "Wed"
+    ]
+   },
+   {
+    "day": "Wed",
+    "label": "Mid-week fresh run",
+    "store": "REWE",
+    "covers": [
      "Thu",
      "Fri",
      "Sat",

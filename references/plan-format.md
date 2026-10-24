@@ -153,6 +153,10 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 ```
 - One stock-up run per cycle (week 1), one batch shop per cook session (same day), and the fresh
   runs every week. Split fresh runs for perishables, e.g. Sat covers Sun–Wed and Wed covers Thu–Sat.
+- Every use has a date. A purchase only serves uses on or after the day it is bought and on or before
+  its expiry (`shelf_days`). The check warns when a covered day comes **before** its fresh run ("buy it
+  earlier") or **after** the shelf life ("add a fresh run closer to those days") — split fresh runs
+  until these warnings are gone.
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
   movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till) and `cycle_cost` /

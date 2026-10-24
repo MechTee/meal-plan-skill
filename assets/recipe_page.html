@@ -186,7 +186,11 @@ const store = {
 let state = Object.assign({variant: Object.keys(D.variants)[0], ticks: {}}, store.get());
 if (!D.variants[state.variant]) state.variant = Object.keys(D.variants)[0];
 const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Every plan string is data: escape it for text AND attribute contexts (quotes included).
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+// Only http(s) links from the plan become hrefs (no javascript:, data:, etc.).
+const safeUrl = u => { try { const x = new URL(String(u)); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : ""; } catch(e) { return ""; } };
 const fmt = (v, d=0) => (Math.round(v * 10**d) / 10**d).toLocaleString("en-GB", {minimumFractionDigits:d, maximumFractionDigits:d});
 
 $("title").textContent = D.title;
@@ -225,7 +229,7 @@ function renderReadout(n){
 
 function tickRow(id, inner){
   const on = !!state.ticks[id];
-  return `<li><label class="row${on?" done":""}" data-id="${id}"><input type="checkbox" ${on?"checked":""} aria-label="Done">${inner}</label></li>`;
+  return `<li><label class="row${on?" done":""}" data-id="${esc(id)}"><input type="checkbox" ${on?"checked":""} aria-label="Done">${inner}</label></li>`;
 }
 function bindTicks(root){
   root.querySelectorAll("label.row").forEach(l => {
@@ -237,6 +241,8 @@ function bindTicks(root){
 function renderIng(){
   const list = D.ing["*"] || D.ing[state.variant] || [];
   $("ingCount").textContent = list.length + " items";
+  // the tick key keeps the ingredient's identity (index + name, as before): a revised recipe that puts
+  // another ingredient at a ticked position starts unticked. esc() in tickRow makes any name safe.
   $("ing").innerHTML = list.map((x,i) => tickRow("i"+i+":"+x[0],
     `<span class="txt">${esc(x[0])}${x[2]?`<span class="note">${esc(x[2])}</span>`:""}</span><span class="amt">${esc(x[1])}</span>`)).join("");
   bindTicks($("ing"));
@@ -249,8 +255,8 @@ function renderPrep(){
 
 const timers = {};
 function renderSteps(){
-  $("steps").innerHTML = D.steps.map((s,i) => tickRow("s"+i,
-    `<span class="stepn">${i+1}</span><span class="txt">${esc(s[0])}${s[1]?`<br><button type="button" class="timer" data-i="${i}" data-m="${s[1]}">▶ ${s[1]} min</button>`:""}</span>`)).join("");
+  $("steps").innerHTML = D.steps.map((s,i) => { const m = num(s[1]); return tickRow("s"+i,
+    `<span class="stepn">${i+1}</span><span class="txt">${esc(s[0])}${m>0?`<br><button type="button" class="timer" data-i="${i}" data-m="${m}">▶ ${m} min</button>`:""}</span>`); }).join("");
   bindTicks($("steps"));
   $("steps").querySelectorAll(".timer").forEach(b => b.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); toggleTimer(b); }));
 }
@@ -287,25 +293,25 @@ function renderAA(v){
   const n = v.n, sc = v.score;
   if (!sc) { $("aa").innerHTML = `<p class="fine" style="font-size:.95rem;color:var(--fg)">${esc(D.noProtein || "No meaningful protein in this one, so there is no amino acid profile to score.")}</p>`; return; }
   const p = n.protein_g, leu = v.aa.leu, small = p < 12;
-  const lo = D.bw*0.3, hi = D.bw*0.4;
+  const lo = num(D.bw)*0.3, hi = num(D.bw)*0.4;
   const pCls = small ? "" : p >= hi ? "good" : p >= lo ? "warn" : "low";
   const lCls = small ? "" : leu >= 2.5 ? "good" : leu >= 2.0 ? "warn" : "low";
   const dCls = small ? "" : sc.diaas_est >= 100 ? "good" : sc.diaas_est >= 75 ? "warn" : "low";
   const rows = AAROWS.map(([k,label,parts]) => {
-    const g = parts.reduce((a,x)=>a+v.aa[x],0), s = sc.scores[k], w = Math.min(s,150)/150*100;
+    const g = parts.reduce((a,x)=>a+num(v.aa[x]),0), s = num(sc.scores[k]), w = Math.min(s,150)/150*100;
     return `<tr class="${k===sc.limiting && s<100 ?"lim":""}"><td>${label}</td><td class="r num">${fmt(g,2)} g</td><td class="r num">${s} %</td><td style="width:38%"><div class="bar"><i style="width:${w}%"></i><em title="100 % of FAO pattern"></em></div></td></tr>`;
   }).join("");
   $("aa").innerHTML = `
     <div class="pills">
       <div class="pill ${pCls}"><b>${fmt(p,1)} g</b><span>protein · target ${fmt(lo)}–${fmt(hi)} g</span></div>
       <div class="pill ${lCls}"><b>${fmt(leu,2)} g</b><span>leucine · target ≥ 2.5 g</span></div>
-      <div class="pill ${dCls}"><b>~${sc.diaas_est}</b><span>est. DIAAS · limiting: ${NAMES[sc.limiting]}</span></div>
+      <div class="pill ${dCls}"><b>~${num(sc.diaas_est)}</b><span>est. DIAAS · limiting: ${NAMES[sc.limiting]}</span></div>
     </div>
     ${small ? `<p class="fine" style="color:var(--fg)">${esc(D.smallNote || "A small protein contribution. Scored for completeness; the day's shakes and main meals carry the protein.")}</p>` : ""}
     <div class="scroll"><table class="aatable">
       <thead><tr><th>Essential amino acid</th><th class="r">Amount</th><th class="r">Score</th><th><span class="vs">vs FAO pattern</span> <span class="vs" style="font-weight:400;text-transform:none;letter-spacing:0">(line = 100 %)</span></th></tr></thead>
       <tbody>${rows}</tbody></table></div>
-    <p class="fine">Amount is total grams in this ${esc(D.unit)}. Score is digestible amino acid per gram of protein against the FAO 2013 pattern for adults, using the per-ingredient digestibility factors from the plan’s ingredient table. The lowest score is the estimated DIAAS. Protein target is 0.3–0.4 g/kg at ${D.bw} kg.${D.aaNote ? " " + esc(D.aaNote) : ""}</p>`;
+    <p class="fine">Amount is total grams in this ${esc(D.unit)}. Score is digestible amino acid per gram of protein against the FAO 2013 pattern for adults, using the per-ingredient digestibility factors from the plan’s ingredient table. The lowest score is the estimated DIAAS. Protein target is 0.3–0.4 g/kg at ${num(D.bw)} kg.${D.aaNote ? " " + esc(D.aaNote) : ""}</p>`;
 }
 
 const MICROS = [["fiber_g","Fibre","g",30,1],["sodium_mg","Sodium","mg",1500,0],["potassium_mg","Potassium","mg",4000,0],["calcium_mg","Calcium","mg",1000,0],
@@ -337,7 +343,7 @@ function render(){
 }
 renderPrep(); renderSteps();
 const SRC = D.sources || [["USDA FoodData Central","https://fdc.nal.usda.gov/"],["Open Food Facts","https://world.openfoodfacts.org/"],["FAO 2013 scoring pattern","https://openknowledge.fao.org/handle/20.500.14283/i3124e"]];
-$("sources").innerHTML = "<span>Data:</span>" + SRC.map(s => `<a href="${esc(s[1])}" target="_blank" rel="noopener">${esc(s[0])}</a>`).join("");
+$("sources").innerHTML = "<span>Data:</span>" + SRC.map(s => safeUrl(s[1]) ? `<a href="${esc(safeUrl(s[1]))}" target="_blank" rel="noopener">${esc(s[0])}</a>` : `<span>${esc(s[0])}</span>`).join("");
 $("notesSec").hidden = !D.notes.length;
 $("notes").innerHTML = D.notes.map(x => `<li>${esc(x)}</li>`).join("");
 render();

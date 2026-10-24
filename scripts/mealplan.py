@@ -296,16 +296,52 @@ def _ordkey(week, day, prior, phase):
 
 # ----------------------------------------------------------------------------- batch inventory
 
-def inventory(plan, cycles=3):
-    """Simulate batch portions over several cycles. Returns per-recipe stats and shortfalls."""
+def surplus_policy(plan):
+    """cycle.surplus_policy: what happens to batch portions that pile up when a recipe is cooked more
+    than it is eaten.
+      {"mode": "discard", "keep": 2}              at each cycle end — just before a recipe's first batch of
+                                                  the new cycle — portions above `keep` per recipe (or
+                                                  {"recipe": n}) are given away / thrown out — modelled
+      {"mode": "horizon", "cycles": 6}            no policy; the freezer is verified for this many cycles only
+    Missing = no policy: a growing surplus is flagged and nothing is certified beyond the simulation."""
+    return plan.get("cycle", {}).get("surplus_policy") or {}
+
+
+DISCARD_MAX_CYCLES = 64
+
+
+def _keep_limit(pol, rk):
+    keep = pol.get("keep", 0)
+    return float(keep.get(rk, 0)) if isinstance(keep, dict) else float(keep)
+
+
+def _simulate_batches(plan, cycles, pol, batch):
+    """One run of the batch-portion simulation over `cycles` cycles (see inventory())."""
     W = cycle_weeks(plan)
-    batch = [k for k, r in plan["recipes"].items() if r["kind"] == "batch"]
-    events = []
-    for c in range(cycles):
+    discard = pol.get("mode") == "discard"
+    events = []          # (t, phase, owner cycle, week, day, recipe, qty) — phase 0 discard, 1 cook, 2 eat
+    end = cycles * 7 * W
+    # one cycle beyond the horizon contributes only its events that happen before the horizon ends —
+    # the next cycle's prior: true cook feeds the last cycle's Sunday meals
+    for c in range(cycles + 1):
+        first_cook = {}
         for s in sessions(plan):
             t = _ordkey(s["week"], s["day"], s["prior"], 1)
             for rk, n in s["cook"].items():
-                events.append((c * 7 * W + t[0], 1, c, s["week"], s["day"], rk, n * float(plan["recipes"][rk]["portions"])))
+                tt = c * 7 * W + t[0]
+                if c == cycles and tt >= end:
+                    continue
+                events.append((tt, 1, c, s["week"], s["day"], rk, n * float(plan["recipes"][rk]["portions"])))
+                if rk not in first_cook or tt < first_cook[rk][0]:
+                    first_cook[rk] = (tt, s["week"], s["day"])
+        # the surplus policy acts at the cycle's chronological boundary for each recipe: just before its
+        # first batch of the new cycle comes in (with prior: true that is the Sunday before week 1, ahead
+        # of the old cycle's Sunday meal). Portions eaten before that first cook are never discarded.
+        if discard and c > 0:
+            for rk, (tt, w, day) in first_cook.items():
+                events.append((tt, 0, c, w, day, rk, None))
+        if c == cycles:
+            continue
         for w in range(1, W + 1):
             for day in WEEKDAYS:
                 d = day_def(plan, w, day)
@@ -315,32 +351,85 @@ def inventory(plan, cycles=3):
                             t = _ordkey(w, day, False, 2)
                             events.append((c * 7 * W + t[0], 2, c, w, day, p["recipe"], -float(p.get("portions", 1))))
     events.sort(key=lambda e: (e[0], e[1]))
-    stock = defaultdict(float)
-    peak = defaultdict(float)
-    peak_total = 0.0
-    shortfalls = []
-    eaten = defaultdict(lambda: defaultdict(float))
-    cooked = defaultdict(lambda: defaultdict(float))
+    st = {"stock": defaultdict(float), "peak": defaultdict(float), "peak_by_cycle": defaultdict(float),
+          "shortfalls": [], "eaten": defaultdict(lambda: defaultdict(float)),
+          "cooked": defaultdict(lambda: defaultdict(float)), "discarded": defaultdict(lambda: defaultdict(float))}
+    stock = st["stock"]
     for t, ph, c, w, day, rk, q in events:
+        if ph == 0:
+            limit = _keep_limit(pol, rk)
+            if stock[rk] > limit:
+                st["discarded"][c][rk] += stock[rk] - limit
+                stock[rk] = limit
+            continue
         stock[rk] += q
         if q < 0:
-            eaten[c][rk] += -q
+            st["eaten"][c][rk] += -q
             if stock[rk] < -1e-9:
-                shortfalls.append({"cycle": c + 1, "week": w, "day": day, "recipe": rk, "short": round(-stock[rk], 2)})
+                st["shortfalls"].append({"cycle": c + 1, "week": w, "day": day, "recipe": rk, "short": round(-stock[rk], 2)})
+                stock[rk] = 0.0   # the missing portion came from elsewhere (a start-up cook); no debt carries on
         else:
-            cooked[c][rk] += q
+            st["cooked"][c][rk] += q
+        total = sum(v * _units(plan, k) for k, v in stock.items() if v > 0)
+        st["peak_by_cycle"][c] = max(st["peak_by_cycle"][c], total)
         if c == cycles - 1:
-            peak[rk] = max(peak[rk], stock[rk])
-            peak_total = max(peak_total, sum(v * _units(plan, k) for k, v in stock.items() if v > 0))
+            st["peak"][rk] = max(st["peak"][rk], stock[rk])
+    return st
+
+
+def _discard_converged(st, cycles, batch):
+    """Discard mode is steady only when the last cycle repeats the one before: same freezer peak, same
+    discards, and every recipe's cooked − eaten − discarded back at zero (nothing left accumulating)."""
+    if cycles < 2:
+        return False
+    a, b = cycles - 2, cycles - 1
+    if abs(st["peak_by_cycle"][a] - st["peak_by_cycle"][b]) > 1e-6:
+        return False
+    for rk in batch:
+        if abs(st["discarded"][a][rk] - st["discarded"][b][rk]) > 1e-6:
+            return False
+        if st["cooked"][b][rk] - st["eaten"][b][rk] - st["discarded"][b][rk] > 1e-6:
+            return False
+    return True
+
+
+def inventory(plan, cycles=3):
+    """Simulate batch portions over several cycles. Returns per-recipe stats, shortfalls, and whether
+    the freezer actually reaches a steady state (no recipe accumulating spare portions every cycle).
+    With a discard policy the simulation runs until it has converged (up to DISCARD_MAX_CYCLES), so a
+    `keep` level the stock only reaches after many cycles is not mistaken for a steady state."""
+    batch = [k for k, r in plan["recipes"].items() if r["kind"] == "batch"]
+    pol = surplus_policy(plan)
+    mode = pol.get("mode")
+    if mode == "horizon":
+        cycles = max(cycles, int(pol.get("cycles", cycles)))
+    st = _simulate_batches(plan, cycles, pol, batch)
+    converged = None
+    if mode == "discard":
+        while not (converged := _discard_converged(st, cycles, batch)) and cycles < DISCARD_MAX_CYCLES:
+            cycles = min(DISCARD_MAX_CYCLES, cycles * 2)
+            st = _simulate_batches(plan, cycles, pol, batch)
     last = cycles - 1
+    cooked, eaten, discarded = st["cooked"][last], st["eaten"][last], st["discarded"][last]
     per = {}
     for rk in batch:
-        per[rk] = {"title": plan["recipes"][rk]["title"], "eaten": eaten[last][rk], "cooked": cooked[last][rk],
-                   "spare": cooked[last][rk] - eaten[last][rk], "peak_stored": round(peak[rk], 2)}
-    steady_short = [s for s in shortfalls if s["cycle"] == cycles]
-    first_short = [s for s in shortfalls if s["cycle"] == 1]
-    return {"per_recipe": per, "peak_total_portions": round(peak_total, 2),
-            "steady_shortfalls": steady_short, "startup_shortfalls": first_short}
+        per[rk] = {"title": plan["recipes"][rk]["title"], "eaten": eaten[rk], "cooked": cooked[rk],
+                   "spare": cooked[rk] - eaten[rk], "peak_stored": round(st["peak"][rk], 2)}
+    # drift: freezer contents keep rising from one cycle to the next (spare portions accumulate);
+    # in discard mode only what the policy has not yet removed counts
+    growing = {rk: cooked[rk] - eaten[rk] - discarded[rk] for rk in batch
+               if cooked[rk] - eaten[rk] - discarded[rk] > 1e-9}
+    if mode == "discard" and not converged and not growing:
+        growing = {rk: v["spare"] for rk, v in per.items() if v["spare"] > 1e-9}
+    drift = round(sum(v * _units(plan, rk) for rk, v in growing.items()), 2)   # containers added per cycle
+    steady = bool(converged) if mode == "discard" else not growing
+    return {"per_recipe": per, "peak_total_portions": round(st["peak_by_cycle"][last], 2),
+            "peak_by_cycle": [round(st["peak_by_cycle"][c], 2) for c in range(cycles)],
+            "steady": steady, "growing": growing if not steady else {}, "drift_per_cycle": drift if not steady else 0.0,
+            "cycles_simulated": cycles, "policy": mode, "converged": converged,
+            "discarded_per_cycle": {rk: round(v, 2) for rk, v in discarded.items() if v > 1e-9},
+            "steady_shortfalls": [s for s in st["shortfalls"] if s["cycle"] == cycles],
+            "startup_shortfalls": [s for s in st["shortfalls"] if s["cycle"] == 1]}
 
 
 # ----------------------------------------------------------------------------- shopping
@@ -683,6 +772,19 @@ def checks(plan, res):
     for s in inv["steady_shortfalls"]:
         out["flags"].append(f"batch shortfall: {s['recipe']} short {s['short']} portions in week {s['week']} {s['day']}")
     fz = plan.get("meta", {}).get("freezer_portions")
+    if not inv["steady"]:
+        grow = ", ".join(f"{plan['recipes'][rk]['title']} +{fmt_num(round(v, 2))}" for rk, v in inv["growing"].items())
+        if inv["policy"] == "discard":
+            out["flags"].append(f"batch surplus still grows after {inv['cycles_simulated']} cycles under the discard "
+                                f"policy ({grow} portions per cycle) — `keep` is above anything the freezer reaches; "
+                                "lower it or rebalance cooking vs eating")
+        elif inv["policy"] == "horizon":
+            out["flags"].append(f"batch surplus grows every cycle ({grow} portions); freezer verified for "
+                                f"{inv['cycles_simulated']} cycles only — rebalance or plan to use the spares before then")
+        else:
+            out["flags"].append(f"batch surplus grows every cycle ({grow} portions, freezer +{fmt_num(inv['drift_per_cycle'])} "
+                                "containers per cycle) — no steady state: rebalance cooking vs eating, or set "
+                                "cycle.surplus_policy (discard/give away spares, or a verified horizon)")
     if fz and inv["peak_total_portions"] > fz:
         out["flags"].append(f"freezer: peak {inv['peak_total_portions']} containers stored vs capacity {fz}")
     for w in res["shopping"]["warnings"]:
@@ -719,12 +821,20 @@ def report(plan, res):
             L.append(f"| {lab[0]} ({lab[1]}) | {r['avg']:.1f} | {r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | {r['ul'] or '–'} | {r['status']} |")
     inv = res["inventory"]
     if inv["per_recipe"]:
-        L.append("\n## Batch portions per cycle (steady state)\n")
+        if inv["steady"]:
+            L.append("\n## Batch portions per cycle (steady state)\n")
+        else:
+            L.append(f"\n## Batch portions per cycle — NOT steady: the freezer grows every cycle "
+                     f"(peaks by cycle: {', '.join(fmt_num(x) for x in inv['peak_by_cycle'])})\n")
         L.append("| Batch | Eaten | Cooked | Spare | Peak stored |")
         L.append("|---|---|---|---|---|")
         for rk, v in inv["per_recipe"].items():
             L.append(f"| {v['title']} | {fmt_num(round(v['eaten'], 2))} | {fmt_num(round(v['cooked'], 2))} | {fmt_num(round(v['spare'], 2))} | {fmt_num(v['peak_stored'])} |")
-        L.append(f"\nPeak freezer containers at once: {fmt_num(inv['peak_total_portions'])}")
+        L.append(f"\nPeak freezer containers at once: {fmt_num(inv['peak_total_portions'])}"
+                 + ("" if inv["steady"] else f" in cycle {inv['cycles_simulated']} — and rising"))
+        if inv["discarded_per_cycle"]:
+            L.append("Surplus policy discards per cycle: " + ", ".join(f"{plan['recipes'][rk]['title']} {fmt_num(v)}"
+                                                                         for rk, v in inv["discarded_per_cycle"].items()))
         if inv["startup_shortfalls"]:
             L.append(f"\nFirst cycle from an empty freezer runs short {len(inv['startup_shortfalls'])}× — plan an extra start-up cook (see shortfalls in computed.json).")
     sh = res["shopping"]

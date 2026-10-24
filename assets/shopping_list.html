@@ -128,7 +128,7 @@ $("readout").innerHTML = `
   <div><b>${money(S.costs.firstTill)}</b><span>first cycle at the till</span></div>`;
 
 function renderCycles(){
-  const n = Math.max(4, state.cycle + 1);
+  const n = Math.min(H, Math.max(4, state.cycle + 1));
   $("cycles").innerHTML = `<span class="eyebrow">Cycle</span>` + Array.from({length:n}, (_,i)=>i+1).map(c => {
     const a = shift(S.runs[0].date, c), b = new Date(a.getTime() + (7*W-1)*DAY);
     return `<button class="chip" type="button" aria-pressed="${c===state.cycle}" data-c="${c}">${c} · ${a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}–${b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}</button>`;
@@ -140,13 +140,21 @@ function renderFilters(){
   $("filters").innerHTML = `<span class="eyebrow">Show</span>` + FILTERS.map(([k,l]) => `<button class="chip" type="button" aria-pressed="${k===state.filter}" data-f="${k}">${l}</button>`).join("");
   $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { state.filter = b.dataset.f; store.set(state); render(); });
 }
+// Quantities exist for every simulated cycle (S.horizon). Beyond that nothing is guessed: the page asks
+// for the plan to be re-rendered instead of reusing the last cycle's numbers.
+const H = Number(S.horizon) || 1;
 function packsFor(it){
   const seq = it.packs_by_cycle || [];
   if (!seq.length) return it.packs;
-  return seq[Math.min(state.cycle-1, seq.length-1)];
+  return state.cycle <= seq.length ? seq[state.cycle-1] : undefined;
 }
 function render(){
   renderCycles(); renderFilters();
+  if (state.cycle > H) {
+    $("runs").innerHTML = `<p class="desc">This shopping list covers ${H} cycles (until ${esc(S.horizonEnd || "the end of cycle " + H)}). `
+      + `Re-run the plan scripts to extend it — quantities after that are not computed, so none are shown.</p>`;
+    return;
+  }
   const runs = S.runs.map(r => ({...r, d: shift(r.date, state.cycle)}));
   const nextIdx = runs.findIndex(r => r.d >= today);
   const html = runs.map((r, idx) => {

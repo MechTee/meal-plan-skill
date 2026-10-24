@@ -366,13 +366,20 @@ def _buy(ingr):
     return sh.get("buy", "stock")
 
 
-def shopping(plan, cycles=4):
+def horizon_cycles(plan):
+    """How many cycles the shopping list is computed for: shopping.horizon_cycles, else about one year."""
+    h = plan.get("shopping", {}).get("horizon_cycles")
+    return int(h) if h else max(4, math.ceil(52 / cycle_weeks(plan)))
+
+
+def shopping(plan, cycles=None):
     """Dated shopping runs for the coming cycle (cycle 1, dates from cycle.start_date) with pack
     rounding, carry-over of leftovers (FIFO, with expiry from shop.shelf_days) and per-cycle pack
     counts so alternating buys ("2 bags one cycle, 1 the next") and slow movers ("lasts ~3 cycles")
     are visible. Cost is reported two ways: what cycle 1 costs at the till, and the pro-rated
     steady-state cost (need / pack size x price) that the weekly budget should use."""
     W = cycle_weeks(plan)
+    cycles = cycles or horizon_cycles(plan)   # every cycle the list can show is simulated — nothing is extrapolated
     ING = plan["ingredients"]
     runs = _runs(plan)
     warnings = []
@@ -468,7 +475,7 @@ def shopping(plan, cycles=4):
             if r["kind"] == "stock" and pack_amt:
                 it["lasts_cycles"] = round(pack_amt / need, 1) if need else None
                 if len(set(seq)) > 1:
-                    it["alternating"] = f"{min(seq)}–{max(seq)} per cycle (next cycles: {', '.join(str(x) for x in seq)})"
+                    it["alternating"] = f"{min(seq)}–{max(seq)} per cycle (next cycles: {', '.join(str(x) for x in seq[:6])}{', …' if len(seq) > 6 else ''})"
             if price is not None and pack_amt:
                 prorated += need / pack_amt * price
             items.append(it)
@@ -477,7 +484,9 @@ def shopping(plan, cycles=4):
         out_runs.append({**{k: v for k, v in r.items() if k not in ("t", "session")},
                          "date": r["date"].isoformat() if r["date"] else None, "items": items, "cost": cost})
     missing_price = sorted({i["name"] for r in out_runs for i in r["items"] if i["price_each"] is None})
-    return {"runs": out_runs, "first_cycle_till_cost": round(till, 2), "cycle_cost": round(prorated, 2),
+    end = run_date(plan, 1, "Sun") + dt.timedelta(days=7 * W * (cycles - 1) + 7 * (W - 1)) if runs and runs[0]["date"] else None
+    return {"runs": out_runs, "horizon_cycles": cycles, "horizon_end": end.isoformat() if end else None,
+            "first_cycle_till_cost": round(till, 2), "cycle_cost": round(prorated, 2),
             "weekly_cost": round(prorated / W, 2), "warnings": sorted(set(warnings)), "missing_price": missing_price}
 
 

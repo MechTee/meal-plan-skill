@@ -114,6 +114,7 @@ def shopping_data(plan, comp):
             "desc": meta.get("shopping_desc", "Dated shop runs. Quantities are whole packs after using up what is left from earlier runs."),
             "currency": meta.get("currency", "EUR"), "locale": meta.get("locale", "en-GB"),
             "cycleWeeks": M.cycle_weeks(plan), "runs": sh["runs"],
+            "horizon": sh["horizon_cycles"], "horizonEnd": sh["horizon_end"],
             "costs": {"weekly": sh["weekly_cost"], "cycle": sh["cycle_cost"], "firstTill": sh["first_cycle_till_cost"]},
             "recipes": [{"title": plan["recipes"][rk]["title"], "line": recipe_line(plan, rk)} for rk in plan["recipes"]],
             "notes": meta.get("shopping_notes", []) + (["Prices missing for: " + ", ".join(sh["missing_price"])] if sh["missing_price"] else [])}

@@ -436,7 +436,10 @@ def shopping(plan, cycles=4):
                     continue
                 sh = ING[k].get("shop") or {}
                 shelf = int(sh["shelf_days"]) if sh.get("shelf_days") else None
-                lots[k] = [l for l in lots[k] if l[0] > 1e-6 and (l[2] is None or l[2] >= bought_on)]
+                # drop only lots that are empty or expired before this run's earliest use: a run may cover days
+                # before its purchase date, and older lots still serve those days if fresh then
+                first_use = uses[0][0]
+                lots[k] = [l for l in lots[k] if l[0] > 1e-6 and (l[2] is None or l[2] >= first_use)]
                 have = sum(l[0] for l in lots[k])
                 # serve from earlier purchases that are still usable on the day of use
                 short = []

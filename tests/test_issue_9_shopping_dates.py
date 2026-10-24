@@ -86,5 +86,23 @@ class BatchIngredients(unittest.TestCase):
         self.assertEqual(batch["date"], "2026-11-01")
 
 
+class EarlierLotsServeEarlierDays(unittest.TestCase):
+    def test_lot_expiring_before_the_next_purchase_still_serves_covered_earlier_days(self):
+        """Review on PR #32: Monday's 500 g (3-day shelf life) supplies Tue–Thu even though the run that
+        covers those days is only on Friday — only Fri–Sun need the new purchase."""
+        sh = M.shopping(plan([{"day": "Mon", "covers": ["Mon"]},
+                              {"day": "Fri", "covers": ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]}], shelf=3, pack=500))
+        self.assertEqual(sh["warnings"], [])
+        fri = next(r for r in sh["runs"] if r["day"] == "Fri")
+        self.assertEqual(fri["items"][0]["packs"], 1)      # 300 g for Fri–Sun
+
+    def test_days_past_the_old_lot_are_still_flagged(self):
+        sh = M.shopping(plan([{"day": "Mon", "covers": ["Mon"]},
+                              {"day": "Sat", "covers": ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]}], shelf=3, pack=500))
+        w = " | ".join(sh["warnings"])
+        self.assertIn("needed on 2026-11-06 but only bought on 2026-11-07", w)   # Friday: old lot expired Thursday
+        self.assertNotIn("2026-11-05", w)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -23,7 +23,7 @@ class Budget(unittest.TestCase):
     def test_issue_reproduction_no_carry_costs_a_full_pack_every_week(self):
         sh = M.shopping(plan(carry=False))            # 700 g a week from 1 000 g packs at €10, leftovers discarded
         item = sh["runs"][0]["items"][0]
-        self.assertEqual(item["packs_by_cycle"], [1, 1, 1, 1])
+        self.assertEqual(set(item["packs_by_cycle"]), {1})        # one pack in every cycle of the horizon (#22)
         self.assertEqual(sh["weekly_cost"], 10.0)
         self.assertEqual(sh["cycle_cost"], 10.0)
         self.assertEqual(sh["consumed_value_per_cycle"], 7.0)

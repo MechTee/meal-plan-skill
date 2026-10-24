@@ -31,6 +31,7 @@ INTERNAL = {
                            "d.dataset.run",   # #20: a JS object key for the open/closed state, never markup
                            "boxes.length", "boxes.length ? done / boxes.length * 100 : 0",   # #20: counts of checkboxes
                            "idx", "uid++", "id",   # #19: DOM ids for aria-labelledby, built from counters ("r0i12")
+                           "H",   # #22: the horizon in cycles, Number(S.horizon) || 1
                            # dates formatted by the browser from Date objects; numbers coerced with num()
                            'a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})',
                            'b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})',

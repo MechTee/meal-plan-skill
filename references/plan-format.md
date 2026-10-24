@@ -189,6 +189,9 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   its expiry (`shelf_days`). The check warns when a covered day comes **before** its fresh run ("buy it
   earlier") or **after** the shelf life ("add a fresh run closer to those days") — split fresh runs
   until these warnings are gone.
+- `horizon_cycles` (optional, default ≈ one year: `ceil(52 / weeks)`): how many cycles the shopping list
+  is simulated for. Every cycle in that range has its own computed quantities (`packs_by_cycle`); the
+  page shows nothing beyond it and asks for the plan to be re-rendered, rather than guessing.
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
   movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till), `cycle_cost` /

@@ -742,7 +742,8 @@ def budget_horizon(plan, demand, cycles):
         pack_amt = _pack_amount(ING[k])
         if g > 0 and pack_amt and sh.get("shelf_days"):
             longest = max(longest, pack_amt / g)
-    return int(min(BUDGET_MAX_CYCLES, max(cycles, BUDGET_CYCLES, math.ceil(2 * longest) + 1)))
+    # never shorter than the shopping horizon itself (#22); the cap only limits the extra length for slow movers
+    return int(max(cycles, min(BUDGET_MAX_CYCLES, max(BUDGET_CYCLES, math.ceil(2 * longest) + 1))))
 
 
 def _pack_amount(ingr):
@@ -920,8 +921,10 @@ def limit_status(res, key, lim, avg, peak, missing_share):
     else:
         ul_status = "within UL"
     if above:
+        # "(known part alone)": a total limit exceeded although some food has no value — form limits are
+        # judged on the form's own data (limit_check), not on the total's completeness
         st = "ABOVE UL" + "".join(f" ({x['label']})" for x in above if x["basis"] != "total") + \
-             ("" if complete else " (known part alone)")
+             ("" if complete or not any(x["basis"] == "total" for x in above) else " (known part alone)")
     elif complete:
         st = {"below floor": "below floor", "below aim": "below aim"}.get(out["min_status"], "ok")
     else:
@@ -998,7 +1001,7 @@ def checks(plan, res):
         if "protein_g" in t and n["protein_g"] < t["protein_g"] - 10:
             out["flags"].append(f"{day}: protein {n['protein_g']:.0f} g is >10 g under target {t['protein_g']} g")
         if T.get("fiber_min") and n["fiber_g"] < T["fiber_min"]:
-            gap = res["days"][day]["total"]["mshare"].get("fiber_g", 0)
+            gap = cd["total"]["mshare"].get("fiber_g", 0)       # this cycle day, overrides included
             if gap > INCOMPLETE:
                 out["flags"].append(f"{day}: fibre ≥ {n['fiber_g']:.0f} g known, under {T['fiber_min']} g — "
                                     f"{gap:.0%} of the food has no fibre value, so the true total may be higher")
@@ -1052,7 +1055,10 @@ def checks(plan, res):
         row.update(limit_status(res, k, lim, tot_avg, tot_max, miss))
         out["micros"].append(row)
         if row["flag"]:
-            extra = f"; highest day {worst} {tot_max:.1f}" if row["status"].startswith("ABOVE UL") else ""
+            # name the quantity that broke each limit: the total on its highest day, or the form's own peak
+            extra = "".join(f"; highest day {worst} {tot_max:.1f}" if x["basis"] == "total"
+                            else f"; {x['label']} peak {x['peak']:g} vs UL {x['ul']:g}"
+                            for x in row["limits"] if x["status"] == "above")
             out["flags"].append(f"micro {k}: {row['status']} — cycle avg {'≥ ' if not row['complete'] else ''}{tot_avg:.1f} "
                                 f"(floor {lim.get('floor')}, aim {lim.get('aim')}, UL {row['ul']}"
                                 + (f"; {miss:.0%} of the food has no value" if not row["complete"] else "") + f"){extra}")

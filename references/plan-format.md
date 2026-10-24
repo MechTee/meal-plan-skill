@@ -27,7 +27,7 @@ and lists every unknown key reference.
 | name | plan name shown on pages |
 | athlete, bw_kg | body weight drives protein/kg and per-feeding targets on pages |
 | currency, locale, country | `"EUR"`, `"de-DE"` — formatting on the shopping page |
-| freezer_portions | freezer capacity in containers; the check flags the peak above it |
+| freezer_portions | freezer capacity in containers (number ≥ 0); the check flags any peak above it. `0` means no freezer, so every frozen batch portion is flagged; leave it out only when capacity is genuinely not a constraint |
 | workbook_notes | list of short notes shown under the Week summary title (e.g. week-2/4 swaps) |
 | ref_label | footer text for the micro bars, e.g. "Bars show % of your daily aim (D-A-CH + athlete adjustments)." |
 | sources | `[["USDA FoodData Central","https://fdc.nal.usda.gov/"], …]` for the page footers |

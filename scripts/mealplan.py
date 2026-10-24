@@ -553,9 +553,14 @@ def checks(plan, res):
         out["energy_availability"].append(r)
         if r["band"] == "low":
             out["flags"].append(f"{day}: energy availability {energy.describe(r)}")
-    if ffm is None or not ex:
-        msg = ("energy availability not checked — set meta.ffm_kg and meta.exercise_kcal "
-               "(from targets.py) so the plan's intake can be checked against training load")
+    # what was actually checked decides the note — not whether the meta-level defaults exist
+    missing = [r for r in out["energy_availability"] if r["value"] is None]
+    if missing:
+        days = ", ".join(r["day"] for r in missing)
+        reasons = "; ".join(sorted({r["reason"] for r in missing}))
+        msg = (f"energy availability not checked for {days} ({reasons}) — set meta.ffm_kg and meta.exercise_kcal "
+               "for every day type (from targets.py), or exercise_kcal on the day, so intake can be checked "
+               "against training load")
         out["ea_note"] = msg
         if meta.get("goal") == "cut":
             out["flags"].append(msg)
@@ -614,9 +619,9 @@ def report(plan, res):
             L.append(f"| {lab[0]} ({lab[1]}) | {r['avg']:.1f} | {r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | {r['ul'] or '–'} | {r['status']} |")
     L.append("\n## Energy availability (intake − planned exercise, per kg fat-free mass)\n")
     if res["checks"].get("ea_note"):
-        L.append(res["checks"]["ea_note"])
-    else:
-        for r in res["checks"]["energy_availability"]:
+        L.append(res["checks"]["ea_note"] + "\n")
+    for r in res["checks"]["energy_availability"]:
+        if r["value"] is not None:
             L.append(f"- {r['day']}: {energy.describe(r)}")
     inv = res["inventory"]
     if inv["per_recipe"]:

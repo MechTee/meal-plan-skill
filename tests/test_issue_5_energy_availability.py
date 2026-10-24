@@ -62,6 +62,40 @@ class PlanCheckEA(unittest.TestCase):
         self.assertTrue(any("energy availability not checked" in f for f in res["checks"]["flags"]))
         self.assertIn("energy availability not checked", M.report(p, res))
 
+    def test_partial_mapping_is_reported(self):
+        """Review on PR #29: known FFM but no training-day entry — the training days were not checked."""
+        p = copy.deepcopy(self.plan)
+        p["meta"]["exercise_kcal"] = {"rest": 0}
+        p["meta"]["goal"] = "cut"
+        res = M.compute(p)
+        note = res["checks"].get("ea_note", "")
+        train = [d for d in M.WEEKDAYS if p["days"][d]["type"] == "training"]
+        self.assertTrue(note and all(d in note for d in train), note)
+        self.assertTrue(any("energy availability not checked" in f for f in res["checks"]["flags"]))
+
+    def test_day_level_exercise_without_meta_mapping_is_complete(self):
+        """Review on PR #29: every day has exercise_kcal — no missing-input note, and every day is reported."""
+        p = copy.deepcopy(self.plan)
+        p["meta"].pop("exercise_kcal", None)
+        for d in M.WEEKDAYS:
+            p["days"][d]["exercise_kcal"] = 400 if p["days"][d]["type"] == "training" else 0
+        res = M.compute(p)
+        self.assertNotIn("ea_note", res["checks"])
+        rep = M.report(p, res)
+        for d in M.WEEKDAYS:
+            self.assertIn(f"- {d}: ", rep)
+
+
+class ToolkitManifest(unittest.TestCase):
+    def test_every_script_is_in_the_restore_list(self):
+        """Review on PR #29: a standalone install restores only the listed scripts."""
+        with open(os.path.join(ROOT, "SKILL.md"), encoding="utf-8") as f:
+            skill = f.read()
+        block = skill.split("**Toolkit setup", 1)[1].split("```", 2)[1]
+        for name in sorted(os.listdir(os.path.join(ROOT, "scripts"))):
+            if name.endswith(".py"):
+                self.assertIn("scripts/" + name, block, name)
+
 
 if __name__ == "__main__":
     unittest.main()

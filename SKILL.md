@@ -30,7 +30,8 @@ working folder `amp/` with the same layout — `Projects project_read` each path
 content (or copy the local file the read returns for large files) to `amp/<path>`:
 
 ```
-scripts/mealplan.py  scripts/targets.py  scripts/build_workbook.py  scripts/render_pages.py
+scripts/mealplan.py  scripts/targets.py  scripts/energy.py  scripts/build_workbook.py
+scripts/render_pages.py
 assets/recipe_page.html  assets/shopping_list.html  assets/example_plan.json
 references/interview.md  references/nutrition.md  references/plan-format.md
 references/sourcing.md  references/artifacts.md

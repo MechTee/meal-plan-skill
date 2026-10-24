@@ -129,7 +129,8 @@
     "pack_label": "ja! Zarte Haferflocken 500 g",
     "price": 0.69,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "soydrink": {
    "name": "Soy drink, high protein",
@@ -172,7 +173,14 @@
     "pack_label": "Vemondo High Protein 1 L",
     "price": 1.15,
     "store": "Lidl"
-   }
+   },
+   "origin": "plant",
+   "fortified_with": [
+    "calcium_mg",
+    "vitD_ug",
+    "riboflavin_mg",
+    "b12_ug"
+   ]
   },
   "isolate": {
    "name": "Soy protein isolate",
@@ -215,7 +223,8 @@
     "pack_label": "Soy isolate 1 kg",
     "price": 19.9,
     "store": "online"
-   }
+   },
+   "origin": "plant"
   },
   "casein": {
    "name": "Micellar casein",
@@ -254,7 +263,8 @@
     "pack_label": "Micellar casein 1 kg",
     "price": 24.9,
     "store": "online"
-   }
+   },
+   "origin": "animal"
   },
   "berries": {
    "name": "Mixed berries, frozen",
@@ -283,7 +293,8 @@
     "pack_label": "ja! Beeren-Mischung 750 g",
     "price": 2.69,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "pumpkin": {
    "name": "Pumpkin seeds",
@@ -325,7 +336,8 @@
     "pack_label": "REWE Bio Kürbiskerne 200 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "chia": {
    "name": "Chia seeds",
@@ -365,7 +377,8 @@
     "pack_label": "REWE Bio Chia-Samen 300 g",
     "price": 2.79,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "hemp": {
    "name": "Hemp seeds, hulled",
@@ -405,7 +418,8 @@
     "pack_label": "Davert Bio Hanfsamen 150 g",
     "price": 3.49,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "kiwi": {
    "name": "Kiwi",
@@ -434,7 +448,8 @@
     "price": 0.39,
     "store": "REWE",
     "shelf_days": 10
-   }
+   },
+   "origin": "plant"
   },
   "almonds": {
    "name": "Almonds",
@@ -475,7 +490,8 @@
     "pack_label": "ja! Mandeln 200 g",
     "price": 2.29,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "brazil": {
    "name": "Brazil nuts",
@@ -514,7 +530,8 @@
     "pack_label": "ja! Paranusskerne 200 g",
     "price": 3.29,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "rucola": {
    "name": "Rucola",
@@ -558,7 +575,8 @@
     "price": 0.75,
     "store": "REWE",
     "shelf_days": 4
-   }
+   },
+   "origin": "plant"
   },
   "beet": {
    "name": "Beetroot, cooked",
@@ -586,7 +604,8 @@
     "price": 1.69,
     "store": "REWE",
     "shelf_days": 14
-   }
+   },
+   "origin": "plant"
   },
   "redonion": {
    "name": "Red onion",
@@ -611,7 +630,8 @@
     "price": 1.29,
     "store": "REWE",
     "shelf_days": 21
-   }
+   },
+   "origin": "plant"
   },
   "lemon": {
    "name": "Lemon juice",
@@ -637,7 +657,8 @@
     "price": 0.55,
     "store": "REWE",
     "shelf_days": 14
-   }
+   },
+   "origin": "plant"
   },
   "balsamic": {
    "name": "Balsamic vinegar",
@@ -661,7 +682,8 @@
     "pack_label": "ja! Aceto Balsamico 500 ml",
     "price": 1.69,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "dijon": {
    "name": "Dijon mustard",
@@ -685,7 +707,8 @@
     "pack_label": "Dijon Senf 185 ml",
     "price": 1.49,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "maple": {
    "name": "Maple syrup",
@@ -709,7 +732,8 @@
     "pack_label": "REWE Bio Ahornsirup 250 ml",
     "price": 4.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "garlic": {
    "name": "Garlic",
@@ -734,7 +758,8 @@
     "price": 0.99,
     "store": "REWE",
     "shelf_days": 30
-   }
+   },
+   "origin": "plant"
   },
   "salt": {
    "name": "Iodised salt",
@@ -759,7 +784,11 @@
     "pack_label": "ja! Jodsalz 500 g",
     "price": 0.29,
     "store": "REWE"
-   }
+   },
+   "origin": "other",
+   "fortified_with": [
+    "iodine_ug"
+   ]
   },
   "rice": {
    "name": "Basmati rice, dry",
@@ -799,7 +828,8 @@
     "pack_label": "ja! Basmati Reis 1 kg",
     "price": 2.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "water": {
    "name": "Water",
@@ -838,7 +868,8 @@
     "vitK_ug": 0,
     "sodium_mg": 0,
     "nitrate_mg": 0
-   }
+   },
+   "origin": "other"
   },
   "lentils": {
    "name": "Red lentils, split",
@@ -881,7 +912,8 @@
     "pack_label": "REWE Bio Rote Linsen 500 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "chunks": {
    "name": "Soy chunks, dry",
@@ -922,7 +954,8 @@
     "pack_label": "Vantastic Soja Schnetzel 1 kg",
     "price": 8.99,
     "store": "online"
-   }
+   },
+   "origin": "plant"
   },
   "onion": {
    "name": "Onion",
@@ -947,7 +980,8 @@
     "price": 0.89,
     "store": "REWE",
     "shelf_days": 30
-   }
+   },
+   "origin": "plant"
   },
   "ginger": {
    "name": "Ginger",
@@ -972,7 +1006,8 @@
     "price": 0.69,
     "store": "REWE",
     "shelf_days": 21
-   }
+   },
+   "origin": "plant"
   },
   "tomatoes": {
    "name": "Chopped tomatoes, tinned",
@@ -1012,7 +1047,8 @@
     "pack_label": "ja! Tomaten gehackt 400 g",
     "price": 0.59,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "spinach": {
    "name": "Leaf spinach, frozen",
@@ -1057,7 +1093,8 @@
     "pack_label": "ja! Blattspinat 1 kg",
     "price": 2.39,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "oil": {
    "name": "Olive oil",
@@ -1082,7 +1119,8 @@
     "pack_label": "ja! Olivenöl extra 750 ml",
     "price": 5.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "garam": {
    "name": "Garam masala",
@@ -1106,7 +1144,8 @@
     "pack_label": "Garam masala 33 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "turmeric": {
    "name": "Turmeric",
@@ -1131,7 +1170,8 @@
     "pack_label": "Kurkuma 37 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "cumin": {
    "name": "Cumin, ground",
@@ -1156,7 +1196,8 @@
     "pack_label": "Kreuzkümmel 35 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "kidney": {
    "name": "Kidney beans, drained",
@@ -1196,7 +1237,8 @@
     "pack_label": "ja! Kidney-Bohnen (255 g drained)",
     "price": 0.69,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "blackbeans": {
    "name": "Black beans, drained",
@@ -1234,7 +1276,8 @@
     "pack_label": "Schwarze Bohnen (240 g drained)",
     "price": 0.75,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "pepper": {
    "name": "Red pepper",
@@ -1261,7 +1304,8 @@
     "price": 2.49,
     "store": "REWE",
     "shelf_days": 10
-   }
+   },
+   "origin": "plant"
   },
   "tpaste": {
    "name": "Tomato paste",
@@ -1285,7 +1329,8 @@
     "pack_label": "ja! Tomatenmark 200 g",
     "price": 0.89,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "paprika": {
    "name": "Smoked paprika",
@@ -1309,7 +1354,8 @@
     "pack_label": "Paprika geräuchert 39 g",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "chili": {
    "name": "Chili flakes",
@@ -1333,7 +1379,8 @@
     "pack_label": "Chiliflocken 40 g",
     "price": 1.49,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "cocoa": {
    "name": "Cocoa powder",
@@ -1359,7 +1406,8 @@
     "pack_label": "Kakao 250 g",
     "price": 2.49,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "yeast": {
    "name": "Nutritional yeast flakes",
@@ -1398,7 +1446,8 @@
     "pack_label": "Vantastic Yeast Flakes 200 g",
     "price": 3.79,
     "store": "REWE"
-   }
+   },
+   "origin": "fungal"
   },
   "stock": {
    "name": "Vegetable stock powder",
@@ -1422,7 +1471,8 @@
     "pack_label": "ja! Gemüsebrühe 140 g",
     "price": 0.59,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "chickpeas": {
    "name": "Chickpeas, drained",
@@ -1462,7 +1512,8 @@
     "pack_label": "ja! Kichererbsen (240 g drained)",
     "price": 0.59,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "sweetpotato": {
    "name": "Sweet potato",
@@ -1489,7 +1540,8 @@
     "price": 2.99,
     "store": "REWE",
     "shelf_days": 21
-   }
+   },
+   "origin": "plant"
   },
   "cauli": {
    "name": "Cauliflower, frozen",
@@ -1514,7 +1566,8 @@
     "pack_label": "ja! Blumenkohl TK 1 kg",
     "price": 1.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "coconut": {
    "name": "Coconut milk, light",
@@ -1538,7 +1591,8 @@
     "pack_label": "Kokosmilch fettreduziert 400 ml",
     "price": 1.29,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "curry": {
    "name": "Red curry paste",
@@ -1562,7 +1616,8 @@
     "pack_label": "Rote Currypaste 110 g",
     "price": 1.39,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "carrot": {
    "name": "Carrot",
@@ -1588,7 +1643,8 @@
     "price": 0.99,
     "store": "REWE",
     "shelf_days": 21
-   }
+   },
+   "origin": "plant"
   },
   "celery": {
    "name": "Celery stalk",
@@ -1614,7 +1670,8 @@
     "price": 1.49,
     "store": "REWE",
     "shelf_days": 14
-   }
+   },
+   "origin": "plant"
   },
   "passata": {
    "name": "Passata",
@@ -1652,7 +1709,8 @@
     "pack_label": "ja! Tomaten passiert 500 g",
     "price": 0.65,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "oregano": {
    "name": "Oregano, dried",
@@ -1676,7 +1734,8 @@
     "pack_label": "Oregano 15 g",
     "price": 0.99,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "spaghetti": {
    "name": "Whole-wheat spaghetti, dry",
@@ -1717,7 +1776,8 @@
     "pack_label": "REWE Bio Vollkorn-Spaghetti 500 g",
     "price": 1.19,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "avocado": {
    "name": "Avocado",
@@ -1746,7 +1806,8 @@
     "price": 1.69,
     "store": "REWE",
     "shelf_days": 5
-   }
+   },
+   "origin": "plant"
   },
   "walnuts": {
    "name": "Walnuts",
@@ -1784,7 +1845,8 @@
     "pack_label": "ja! Walnüsse 200 g",
     "price": 2.49,
     "store": "REWE"
-   }
+   },
+   "origin": "plant"
   },
   "applejuice": {
    "name": "Apple juice",
@@ -1809,7 +1871,8 @@
     "price": 1.19,
     "store": "REWE",
     "shelf_days": 60
-   }
+   },
+   "origin": "plant"
   },
   "glycerol": {
    "name": "Glycerol 99.5 %",
@@ -1833,7 +1896,8 @@
     "pack_label": "Glycerol E422 1 L (1.26 kg)",
     "price": 12.9,
     "store": "online"
-   }
+   },
+   "origin": "other"
   },
   "citrulline": {
    "name": "Citrulline malate 2:1",
@@ -1857,7 +1921,8 @@
     "pack_label": "Citrulline malate 500 g",
     "price": 17.9,
     "store": "online"
-   }
+   },
+   "origin": "other"
   },
   "betaalanine": {
    "name": "Beta-alanine",
@@ -1881,7 +1946,8 @@
     "pack_label": "Beta-alanine 500 g",
     "price": 14.9,
     "store": "online"
-   }
+   },
+   "origin": "other"
   },
   "taurine": {
    "name": "Taurine",
@@ -1905,7 +1971,8 @@
     "pack_label": "Taurine 500 g",
     "price": 9.9,
     "store": "online"
-   }
+   },
+   "origin": "other"
   },
   "creatine": {
    "name": "Creatine monohydrate",
@@ -1929,7 +1996,8 @@
     "pack_label": "Creatine 1 kg",
     "price": 22.9,
     "store": "online"
-   }
+   },
+   "origin": "other"
   }
  },
  "recipes": {

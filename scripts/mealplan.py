@@ -19,6 +19,19 @@ MICROS = ["thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "b6_mg",
           "zinc_mg", "iron_mg", "selenium_ug", "iodine_ug", "vitA_rae_ug", "vitC_mg", "vitD_ug",
           "vitE_mg", "vitK_ug", "sodium_mg", "nitrate_mg"]
 NUTRIENTS = MACROS + MICROS
+# Nutrient forms that carry their own upper limits (EFSA): form key -> (parent nutrient, label).
+# Values are part of the parent total; per100 may give them explicitly. When absent they default to 0
+# only where that is certain (see form_value); otherwise they are unknown and limits stay unresolved.
+FORMS = OrderedDict([
+    ("retinol_ug", ("vitA_rae_ug", "preformed vitamin A (retinol)")),
+    ("folic_acid_ug", ("folate_ug", "folic acid (synthetic)")),
+    ("magnesium_added_mg", ("magnesium_mg", "added/supplemental magnesium")),
+    ("nicotinamide_mg", ("niacin_mg", "nicotinamide")),
+    ("nicotinic_acid_mg", ("niacin_mg", "nicotinic acid")),
+])
+FORM_KEYS = list(FORMS)
+# supplement forms that follow from the nutrient itself: every magnesium supplement is supplemental magnesium
+SUPPLEMENT_IS_FORM = {"magnesium_added_mg"}
 AAS = ["his", "ile", "leu", "lys", "met", "cys", "phe", "tyr", "thr", "trp", "val"]
 # FAO 2013 scoring pattern, older child/adolescent/adult, mg per g protein
 FAO = {"his": 16, "ile": 30, "leu": 61, "lys": 48, "saa": 23, "aaa": 41, "thr": 25, "trp": 6.6, "val": 40}
@@ -121,10 +134,41 @@ def ing_nutrients(ingr, grams):
             missing[k] = grams
         else:
             out[k] = v * grams / 100.0
+    for fk in FORM_KEYS:
+        v = form_value(ingr, fk)
+        if v is None:
+            out[fk] = 0.0
+            missing[fk] = grams
+        else:
+            out[fk] = v * grams / 100.0
     aa = ingr.get("aa") or {}
     aa_out = {a: (aa.get(a) or 0.0) * grams / 100.0 for a in AAS}
     dig = ingr.get("digestibility", 0.85)
     return out, missing, aa_out, dig
+
+
+def form_value(ingr, fk):
+    """Per-100 amount of a nutrient form, or None when it cannot be known.
+
+    - given in per100 → that value
+    - parent nutrient known to be 0 → 0
+    - retinol: plant and fungal foods contain none (their vitamin A is carotenoids), nor do
+      non-food ingredients (origin "other": water, salt, pure compounds) → 0
+    - folic acid, added magnesium, nicotinamide, nicotinic acid only occur when added: 0 unless the
+      ingredient lists the parent nutrient in `fortified_with` (or is marked `"fortified": true`)
+    """
+    p = ingr["per100"]
+    if p.get(fk) is not None:
+        return p[fk]
+    parent = FORMS[fk][0]
+    if p.get(parent) == 0:
+        return 0.0
+    fortified = ingr.get("fortified") is True or parent in (ingr.get("fortified_with") or [])
+    if fk == "retinol_ug":
+        if ingr.get("origin") in ("plant", "fungal", "other") and not fortified:
+            return 0.0
+        return None
+    return None if fortified else 0.0
 
 
 class Acc:
@@ -173,6 +217,7 @@ class Acc:
 
     def export(self, nd=3):
         return {"n": {k: round(self.n.get(k, 0.0), nd) for k in NUTRIENTS},
+                "forms": {k: round(self.n.get(k, 0.0), nd) for k in FORM_KEYS},
                 "aa": {a: round(self.aa.get(a, 0.0), nd) for a in AAS},
                 "score": self.score(), "mshare": self.mshare()}
 
@@ -514,6 +559,48 @@ def compute(plan):
     return res
 
 
+def limits_of(lim):
+    """Upper limits of one nutrient: `limits` [{basis, ul}] plus the legacy total `ul`."""
+    out = [dict(x) for x in lim.get("limits", [])]
+    if lim.get("ul") and not any(x.get("basis", "total") == "total" for x in out):
+        out.append({"basis": "total", "ul": lim["ul"]})
+    return out
+
+
+def limit_check(res, key, lim, L):
+    """Compare the right quantity with one limit. basis "total" = whole nutrient (food + supplements);
+    a form key = only that form (food form + supplement form). Unknown form → "unresolved", never ok."""
+    basis, ul = L.get("basis", "total"), float(L["ul"])
+    supp = float(lim.get("supplement") or 0)
+    if basis == "total":
+        peak = max(res["days"][d]["total"]["n"].get(key, 0) for d in WEEKDAYS) + supp
+        return {"basis": basis, "label": "total", "ul": ul, "peak": round(peak, 2),
+                "status": "above" if peak > ul else "ok", "reason": ""}
+    label = FORMS.get(basis, (None, basis))[1]
+    food = max(res["days"][d]["total"]["forms"].get(basis, 0) for d in WEEKDAYS)
+    miss = max(res["days"][d]["total"]["mshare"].get(basis, 0) for d in WEEKDAYS)
+    forms = lim.get("supplement_forms") or {}
+    if basis in forms:
+        s_form = float(forms[basis])
+    elif supp == 0:
+        s_form = 0.0
+    elif basis in SUPPLEMENT_IS_FORM:
+        s_form = supp
+    else:
+        s_form = None
+    known = food + (s_form or 0)
+    out = {"basis": basis, "label": label, "ul": ul, "peak": round(known, 2)}
+    if known > ul:
+        return {**out, "status": "above", "reason": ""}
+    if s_form is None:
+        return {**out, "status": "unresolved",
+                "reason": f"{label} limit {ul:g} — supplement form unknown (set supplement_forms.{basis})"}
+    if miss > 0:   # strict: any food with an unknown amount of this form could carry it over the limit
+        return {**out, "status": "unresolved",
+                "reason": f"{label} limit {ul:g} — {miss:.0%} of the food has no {basis} value"}
+    return {**out, "status": "ok", "reason": ""}
+
+
 def checks(plan, res):
     T = plan.get("targets", {})
     out = {"days": [], "micros": [], "flags": []}
@@ -544,7 +631,9 @@ def checks(plan, res):
         miss = max(res["days"][d]["total"]["mshare"].get(k, 0) for d in WEEKDAYS)
         avg = sum(vals) / 7
         row = {"key": k, "avg": round(avg, 2), "min": round(min(vals), 2), "max": round(max(vals), 2),
-               "floor": lim.get("floor"), "aim": lim.get("aim"), "ul": lim.get("ul"),
+               "floor": lim.get("floor"), "aim": lim.get("aim"),
+               "ul": "; ".join(f"{x['ul']:g}" + ("" if x.get("basis", "total") == "total" else f" ({FORMS.get(x['basis'], (0, x['basis']))[1]})")
+                               for x in limits_of(lim)) or None,
                "supplement": lim.get("supplement", 0), "missing_share": miss}
         tot_avg = avg + (lim.get("supplement") or 0)
         row["avg_incl_supp"] = round(tot_avg, 2)
@@ -553,9 +642,14 @@ def checks(plan, res):
             st = "below floor"
         elif lim.get("aim") and tot_avg < lim["aim"]:
             st = "below aim"
-        if lim.get("ul") and (max(vals) + (lim.get("supplement") or 0)) > lim["ul"]:
-            st = "ABOVE UL"
-        if miss > 0.1 and st != "ok":
+        row["limits"] = [limit_check(res, k, lim, L) for L in limits_of(lim)]
+        above = [x for x in row["limits"] if x["status"] == "above"]
+        unresolved = [x for x in row["limits"] if x["status"] == "unresolved"]
+        if above:
+            st = "ABOVE UL" + "".join(f" ({x['label']})" for x in above if x["basis"] != "total")
+        elif unresolved:
+            st = (st + "; " if st != "ok" else "") + "UL unresolved: " + "; ".join(x["reason"] for x in unresolved)
+        if miss > 0.1 and st not in ("ok",) and not st.startswith("UL unresolved"):
             st += " (data incomplete)"
         row["status"] = st
         out["micros"].append(row)

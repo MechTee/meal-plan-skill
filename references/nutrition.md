@@ -84,7 +84,12 @@ DFE (UL 1 000 µg folic acid) · B12 4.0 µg · K 4 000 · P 700 (EFSA AI 550) �
 K 70/60 µg · Na 1 500 mg.
 
 Supplements and ULs: add regular supplements as a daily average (`supplement` in plan.json);
-the check compares food + supplement against UL. Multivitamins on top of a fortified diet often
+the check compares food + supplement against total ULs. Some ULs apply to one form only and are
+modelled as such (`limits` with a form `basis`): magnesium 250 mg covers supplemental/added
+magnesium (not food magnesium); folate 1 000 µg covers synthetic folic acid; vitamin A 3 000 µg
+covers preformed retinol (carotenoids from plants do not count); niacin 900 mg nicotinamide and
+10 mg nicotinic acid. Record the supplement's form (`supplement_forms`); if it is unknown the check
+says "unresolved". Multivitamins on top of a fortified diet often
 push zinc, vitamin A, iodine or selenium toward ULs — check before recommending.
 
 ## 4 · Timing and the training-day chain

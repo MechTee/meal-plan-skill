@@ -30,26 +30,29 @@ MET = {  # Compendium of Physical Activities (Ainsworth 2011 / Herrmann 2024), g
 BASE_PAL = {"desk": 1.25, "standing": 1.4, "manual": 1.6}  # incl. thermic effect of food, excl. extra steps/training
 
 # Reference values: D-A-CH (DGE/ÖGE/SGE) adults 25–<51 as of 2026 knowledge — floor = reference intake.
-# UL = EFSA tolerable upper level (or safe level) for TOTAL intake unless noted.
+# UL = EFSA tolerable upper level (or safe level). A number applies to TOTAL intake; a list of
+# (form, limit) applies only to that form (see FORMS in mealplan.py) — e.g. the magnesium UL covers
+# supplemental/added magnesium, the vitamin A UL preformed retinol, the folate UL synthetic folic acid.
 # Verify any value you are unsure of on dge.de / efsa.europa.eu before finalising a plan.
 REF = {  # key: (male, female, UL, note)
     "thiamin_mg": (1.2, 1.0, None, "scales with energy intake"),
     "riboflavin_mg": (1.4, 1.1, None, "scales with energy intake"),
-    "niacin_mg": (15, 12, None, "UL applies to supplemental nicotinamide/nicotinic acid only"),
+    "niacin_mg": (15, 12, [("nicotinamide_mg", 900), ("nicotinic_acid_mg", 10)],
+                  "ULs apply to nicotinamide and nicotinic acid from supplements/fortification only"),
     "pantothenic_mg": (5, 5, None, "estimated value"),
     "b6_mg": (1.6, 1.4, 12, "EFSA UL 12 mg (2023)"),
     "biotin_ug": (40, 40, None, "estimated value"),
-    "folate_ug": (300, 300, None, "UL 1000 µg applies to synthetic folic acid only"),
+    "folate_ug": (300, 300, [("folic_acid_ug", 1000)], "UL 1000 µg applies to synthetic folic acid only"),
     "b12_ug": (4.0, 4.0, None, "vegan: must supplement; absorption saturates — dose per pack"),
     "potassium_mg": (4000, 4000, None, "estimated value"),
     "phosphorus_mg": (700, 700, None, "EFSA AI 550 mg"),
-    "magnesium_mg": (350, 300, None, "EFSA UL 250 mg applies to supplements only"),
+    "magnesium_mg": (350, 300, [("magnesium_added_mg", 250)], "UL 250 mg applies to supplemental/added magnesium only"),
     "calcium_mg": (1000, 1000, 2500, ""),
     "zinc_mg": (14, 8, 25, "phytate-dependent; see diet adjustment"),
     "iron_mg": (11, 16, 40, "EFSA safe level 40 mg (2024); women 19–50 value — verify current DGE band"),
     "selenium_ug": (70, 60, 255, "EFSA UL 255 µg (2023)"),
     "iodine_ug": (200, 200, 600, "EFSA AI 150 µg; plant drinks are rarely iodised"),
-    "vitA_rae_ug": (850, 700, 3000, "UL is for preformed retinol"),
+    "vitA_rae_ug": (850, 700, [("retinol_ug", 3000)], "UL 3000 µg applies to preformed vitamin A (retinol) only"),
     "vitC_mg": (110, 95, None, "no UL; GI upset above ~1 g supplemental"),
     "vitD_ug": (20, 20, 100, "reference assumes no sun synthesis"),
     "vitE_mg": (14, 12, 300, "estimated value"),
@@ -176,7 +179,11 @@ def compute(p):
         if k == "vitC_mg":
             aim = max(floor, 150)
             why = "150 mg covers heavy training; no benefit shown for megadoses"
-        micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
+        if isinstance(ul, list):
+            micros[k] = {"floor": floor, "aim": aim, "ul": None,
+                         "limits": [{"basis": b, "ul": v} for b, v in ul], "note": why}
+        else:
+            micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
 
     return {
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
@@ -207,7 +214,8 @@ def summary(p, r):
     L.append(f"\nSport guideline for carbs: {lo}–{hi} g/kg on training days. Water ≈ {r['water_l']} L/day plus drinks around sessions.")
     L += ["", "## Micronutrients (per day)", "| Nutrient | Floor | Aim | UL | Why |", "|---|---|---|---|---|"]
     for k, v in t["micros"].items():
-        L.append(f"| {k} | {v['floor'] if v['floor'] is not None else '–'} | {v['aim'] if v['aim'] is not None else '–'} | {v['ul'] or '–'} | {v['note']} |")
+        ul = v["ul"] or "; ".join(f"{x['ul']} ({x['basis']})" for x in v.get("limits", [])) or "–"
+        L.append(f"| {k} | {v['floor'] if v['floor'] is not None else '–'} | {v['aim'] if v['aim'] is not None else '–'} | {ul} | {v['note']} |")
     return "\n".join(L)
 
 

@@ -47,6 +47,13 @@ and lists every unknown key reference.
 `micros` keys are the nutrient keys below; take them from `targets.py` output. `supplement` is a
 daily average and is added to food in checks and in the workbook ("Supplements / day" row).
 
+Upper limits: `ul` applies to the **total** intake. `limits: [{"basis": "<form key>", "ul": n}]`
+applies to one form only (magnesium → `magnesium_added_mg` 250; folate → `folic_acid_ug` 1000;
+vitamin A → `retinol_ug` 3000; niacin → `nicotinamide_mg` 900 and `nicotinic_acid_mg` 10). Say what form a
+supplement is in with `supplement_forms`, e.g. `{"supplement": 400, "supplement_forms": {"folic_acid_ug": 400}}`.
+A magnesium supplement always counts as added magnesium; for the others an unknown supplement form
+leaves the limit **unresolved** (reported, never "ok").
+
 ## ingredients
 
 (`//` comments below are explanations only — JSON files cannot contain them.)
@@ -62,6 +69,8 @@ daily average and is added to food in checks and in the workbook ("Supplements /
   "aa": {"his": 1.27, "ile": 2.2, "leu": 3.82, "lys": 3.04, "met": 0.64, "cys": 0.64,
          "phe": 2.45, "tyr": 1.76, "thr": 1.86, "trp": 0.64, "val": 2.3},   // g per 100 g
   "digestibility": 0.9,
+  "origin": "plant",                     // plant | fungal | animal | other (water, salt, pure compounds) — only animal foods contain preformed retinol
+  "fortified_with": [],                  // parent nutrients added by the maker, e.g. ["calcium_mg", "vitD_ug", "folate_ug"]
   "piece_g": null,                       // grams per piece when bought by the piece
   "shop": {"buy": "stock", "pack_size": 1000, "pack_unit": "g", "pack_label": "Vantastic Soja Schnetzel 1 kg",
            "price": 8.99, "store": "online", "link": "https://…", "shelf_days": null, "carry": true,
@@ -73,6 +82,13 @@ Nutrient keys (`per100`): `kcal protein_g fat_g satfat_g carb_g sugar_g fiber_g 
 `thiamin_mg riboflavin_mg niacin_mg pantothenic_mg b6_mg biotin_ug folate_ug b12_ug potassium_mg
 phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA_rae_ug vitC_mg
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
+Nutrient **forms** with their own upper limits (optional per100 keys): `retinol_ug` (preformed
+vitamin A, part of `vitA_rae_ug`), `folic_acid_ug` (synthetic, part of `folate_ug`),
+`magnesium_added_mg` (added/supplemental magnesium), `nicotinamide_mg`, `nicotinic_acid_mg` (part of
+`niacin_mg`). When a form is not given it is 0 where that is certain — the parent nutrient is 0;
+retinol in a `plant`, `fungal` or `other` ingredient; folic acid, added magnesium and the niacin forms in a food not
+`fortified_with` that nutrient — and unknown otherwise.
+
 Leave a key **out** (or `null`) when unknown — it is tracked as missing data and shown as "≥" on the
 pages; write `0` only when the true value is zero. `sodium_mg` defaults to `salt_g × 400`.
 Carbs are net carbs (EU-label style); fibre separate. For US-label data subtract fibre from total

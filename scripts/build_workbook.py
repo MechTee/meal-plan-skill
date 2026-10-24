@@ -347,6 +347,16 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
                 put(ws, f"{col}{r}", f"=IF(N({col}{rows['Aim (athlete)']})=0,\"\",{col}{rows['Average incl. supplements']}/{col}{rows['Aim (athlete)']})", fmt="0%")
             else:
                 v = (mt.get(k) or {}).get(key)
+                if key == "ul":
+                    forms = [x for x in (mt.get(k) or {}).get("limits", []) if x.get("basis", "total") != "total"]
+                    if forms:
+                        # form-specific limits apply to one form only, so they are not compared with the total here
+                        c = put(ws, f"{col}{r}", " · ".join(f"{x['ul']:g} ({M.FORMS.get(x['basis'], (0, x['basis']))[1]})" for x in forms),
+                                color=GREY, italic=True, wrap=True)
+                        c.comment = Comment("This limit applies only to the named form (supplements/fortified foods for folic acid, "
+                                            "added magnesium and niacin forms; preformed retinol for vitamin A). It is checked by "
+                                            "mealplan.py check, not against the total in this row.", "plan")
+                        continue
                 if v is not None:
                     c = put(ws, f"{col}{r}", v, color=color)
                     note = (mt.get(k) or {}).get("supplement_note") if key == "supplement" else None

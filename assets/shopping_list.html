@@ -166,6 +166,18 @@ function packsFor(it){
 }
 // Runs the user opened or closed by hand, per cycle — kept across re-renders (cycle/filter changes).
 const openState = {};
+// Cost of an item in the selected cycle: that cycle's packs × the unit price. null = price unknown.
+function costFor(it){
+  const p = packsFor(it);
+  if (p === 0) return 0;
+  if (p == null || it.price_each == null) return null;
+  return Math.round(p * Number(it.price_each) * 100) / 100;
+}
+function runCost(r){
+  let total = 0, unpriced = 0;
+  r.items.forEach(it => { const c = costFor(it); if (c == null) unpriced++; else total += c; });
+  return {total: Math.round(total * 100) / 100, unpriced};
+}
 function render(){
   renderCycles(); renderFilters();
   if (state.cycle > H) {
@@ -180,6 +192,7 @@ function render(){
     if (["stock","batch","fresh"].includes(state.filter) && r.kind !== state.filter) return "";
     const tk = state.ticks[`${state.cycle}:${r.id}`] || {};
     const items = r.items.filter(it => (packsFor(it) ?? 1) > 0);
+    const rc = runCost(r);
     const done = items.filter(it => tk[it.key]).length;
     const groups = {};
     r.items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
@@ -190,7 +203,8 @@ function render(){
       const qty = skip ? "skip" : (p == null ? `${Math.round(num(it.need))} ${esc(it.unit)}` : `${num(p)} ×`);
       const sub = skip ? `have enough` : (it.pack_label ? esc(it.pack_label) : "");
       const bits = [];
-      if (it.cost && !skip) bits.push(money(it.cost));
+      const c = costFor(it);
+      if (!skip) bits.push(c == null ? "price missing" : money(c));
       if (it.store) bits.push(esc(it.store));
       bits.push(`uses ${Math.round(num(it.need)).toLocaleString()} ${esc(it.unit)}`);
       if (it.alternating) bits.push(esc(it.alternating));
@@ -203,7 +217,7 @@ function render(){
     const manual = openState[`${state.cycle}:${r.id}`];
     const open = (manual !== undefined ? manual : (isNext || state.filter !== "upcoming" && state.filter !== "all")) ? "open" : "";
     return `<details class="run${isNext?" next":""}${isDone?" done":""}" data-run="${esc(r.id)}" ${open}>
-      <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(r.cost)}</span></span>
+      <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(rc.total)}${rc.unpriced ? ` + ${rc.unpriced} without price` : ""}</span></span>
       <span class="prog">${done}/${items.length}</span><span class="meter"><i style="width:${items.length?done/items.length*100:0}%"></i></span></summary>
       <div class="body">${body}<div class="foot"><span>${esc(r.note || "")}</span><button type="button" data-clear="${esc(r.id)}">Clear ticks</button></div></div></details>`;
   }).join("");

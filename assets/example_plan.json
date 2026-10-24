@@ -3,6 +3,12 @@
   "name": "Example — vegetarian lean-gain plan",
   "athlete": "Example athlete",
   "bw_kg": 87,
+  "ffm_kg": 75.7,
+  "goal": "lean_gain",
+  "exercise_kcal": {
+   "training": 435,
+   "rest": 0
+  },
   "currency": "EUR",
   "country": "DE",
   "freezer_portions": 24,

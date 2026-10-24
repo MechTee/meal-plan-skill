@@ -10,8 +10,11 @@ CLI:
   python mealplan.py check   plan.json            -> markdown report (targets, micros, batches, cost)
   python mealplan.py compute plan.json out.json   -> computed.json used by the builders
 """
-import json, math, sys, datetime as dt
+import json, math, os, sys, datetime as dt
 from collections import defaultdict, OrderedDict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import energy
 
 MACROS = ["kcal", "protein_g", "fat_g", "satfat_g", "carb_g", "sugar_g", "fiber_g", "salt_g"]
 MICROS = ["thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "b6_mg", "biotin_ug",
@@ -817,6 +820,30 @@ def checks(plan, res):
         sc = cd["total"]["score"]
         if sc and sc["scores"][sc["limiting"]] < 100:
             out["flags"].append(f"{day}: day-level amino-acid score {sc['scores'][sc['limiting']]} (limiting {sc['limiting']})")
+    # energy availability per day: (intake − planned exercise) / fat-free mass
+    meta = plan.get("meta", {})
+    ffm, ex = meta.get("ffm_kg"), meta.get("exercise_kcal") or {}
+    out["energy_availability"] = []
+    # every day definition of the cycle, week overrides included (#3); labels like "Sat (wk 2, 4)"
+    for g, cd in zip(day_groups(plan), res["cycle_days"]):
+        d = g["def"]
+        exercise = d.get("exercise_kcal", ex.get(d.get("type", "training")))
+        r = energy.assess(cd["total"]["n"]["kcal"], exercise, ffm)
+        r["day"] = cd["label"]
+        out["energy_availability"].append(r)
+        if r["band"] == "low":
+            out["flags"].append(f"{r['day']}: energy availability {energy.describe(r)}")
+    # what was actually checked decides the note — not whether the meta-level defaults exist
+    missing = [r for r in out["energy_availability"] if r["value"] is None]
+    if missing:
+        days = ", ".join(r["day"] for r in missing)
+        reasons = "; ".join(sorted({r["reason"] for r in missing}))
+        msg = (f"energy availability not checked for {days} ({reasons}) — set meta.ffm_kg and meta.exercise_kcal "
+               "for every day type (from targets.py), or exercise_kcal on the day, so intake can be checked "
+               "against training load")
+        out["ea_note"] = msg
+        if meta.get("goal") == "cut":
+            out["flags"].append(msg)
     mt = T.get("micros", {})
     # every actual day of the cycle (W x 7), so week overrides count in averages and maxima
     actual = [cd for cd in res["cycle_days"] for _ in cd["weeks"]]
@@ -898,6 +925,12 @@ def report(plan, res):
                      f"{r['ul'] or '–'} | {r['missing_share']:.0%} | {r['status']} |")
         L.append("\n“≥” = some food has no value for this nutrient, so the true intake is at least this much. "
                  "An upper limit can only be confirmed once those values are filled in.")
+    L.append("\n## Energy availability (intake − planned exercise, per kg fat-free mass)\n")
+    if res["checks"].get("ea_note"):
+        L.append(res["checks"]["ea_note"] + "\n")
+    for r in res["checks"]["energy_availability"]:
+        if r["value"] is not None:
+            L.append(f"- {r['day']}: {energy.describe(r)}")
     inv = res["inventory"]
     if inv["per_recipe"]:
         if inv["steady"]:

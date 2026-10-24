@@ -144,6 +144,9 @@ Design rules that come from real use:
   feedings; pre-sleep casein (or a slow plant blend) if they want it.
 - **Pre-workout chain is timed from the session:** meal T−2.5–3 h, drink T−60, intra during,
   post-workout within ~2 h. Build a timing variant per session time the athlete uses.
+- **Energy availability is part of the draft.** Copy `bmr.ffm_kg` and the per-day-type exercise
+  kcal from `targets.py` into `meta.ffm_kg` / `meta.exercise_kcal` so the check covers the actual
+  plan; a day with extra or no training can set its own `exercise_kcal`.
 - **Supplements count toward totals.** Put food in `days`, and list supplements as
   `targets.micros.<key>.supplement` (daily average — a 400 µg tablet every third day is 133 µg).
 - **Allergens are binding.** Tag every ingredient with `allergens` (and `may_contain` for trace
@@ -261,8 +264,13 @@ drift apart.
 - **Signs of disordered eating** (fear of foods, compensatory exercise, rapid loss, a stated
   history): stop giving calorie numbers, targets or deficit plans; offer structure without numbers
   and point to professional support.
-- **Low energy availability:** in a cut, keep intake ≥ ~30 kcal per kg fat-free mass, ideally ≥ 45;
-  flag RED-S signs (missed periods, frequent injury, fatigue).
+- **Low energy availability:** energy availability is intake **minus planned exercise expenditure**,
+  per kg fat-free mass — not total intake per kg. `targets.py` and `mealplan.py check` compute it when
+  a body-fat estimate exists (`meta.ffm_kg`, `meta.exercise_kcal`); without one, say it could not be
+  checked and ask for a rough estimate before setting a deficit for a heavily training athlete. Below
+  ~30 kcal/kg FFM: revise the plan (smaller deficit, more on training days) and screen for REDs
+  signs (menstrual changes, low libido, recurrent injury or illness, fatigue, stalled performance).
+  These are screening reference points, not diagnostic cut-offs — symptoms outrank the number.
 - **Drug-tested athletes:** only batch-tested supplements (Kölner Liste, Informed Sport, NSF
   Certified for Sport); flag anything else.
 - **Conditions:** kidney disease → no high-protein plan without their doctor; hypertension →

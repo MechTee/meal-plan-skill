@@ -20,7 +20,9 @@ Prints a markdown summary and writes targets.json in the plan.json "targets" sha
 Numbers are starting estimates: tell the athlete to adjust kcal from the 7-day weight
 average after 2–3 weeks (~±150 kcal per step).
 """
-import math, json, sys
+import math, json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import energy
 
 MET = {  # Compendium of Physical Activities (Ainsworth 2011 / Herrmann 2024), gross METs
     "resistance_light": 3.5, "resistance_vigorous": 5.0, "powerlifting": 6.0, "hiit": 8.0,
@@ -265,8 +267,24 @@ def compute(p):
             why = "150 mg covers heavy training; no benefit shown for megadoses"
         micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why, "source": ref_source(k)}
 
+    # energy availability: intake minus planned exercise, per kg fat-free mass
+    ffm = b.get("ffm_kg")
+    ea = {"training": energy.assess(kcal_train, train_extra if n_train else 0, ffm),
+          "rest": energy.assess(kcal_rest, 0, ffm),
+          "week_avg": energy.assess((kcal_train * n_train + kcal_rest * (7 - n_train)) / 7, sess_week / 7, ffm),
+          "method": "EA = (intake − planned exercise above resting) / FFM; steps and job activity not subtracted"}
+    if ffm is None:
+        if goal == "cut" or sess_week / 7 > 300:
+            notes.append("energy availability not computed: no body-fat estimate, so fat-free mass is unknown — "
+                         "ask for one (even a rough range) before setting a deficit for a heavily training athlete")
+    else:
+        for k in ("training", "week_avg"):
+            if ea[k]["band"] == "low":
+                notes.append(f"energy availability {k.replace('_', ' ')}: {energy.describe(ea[k])}")
+
     return {
         "training_days": n_train, "training_day_basis": day_basis,
+        "energy_availability": ea,
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
         "session_kcal": [round(x) for x in sess_day], "tdee": {"training": round(tdee_train), "rest": round(tdee_rest), "avg": round(tdee_avg)},
         "goal_adjust_kcal": round(adj), "notes": notes, "protein_g_per_kg": round(protein / w, 2),
@@ -292,6 +310,11 @@ def summary(p, r):
         x = t[d]
         L.append(f"| {d} | {x['kcal']} | {x['protein_g']} ({x['protein_g'] / w:.1f}/kg) | {x['carb_g']} | {x['fat_g']} | {x['carb_g'] / w:.1f} |")
     lo, hi = r["carb_guide_g_per_kg"]
+    ea = r.get("energy_availability", {})
+    if ea:
+        L.append("\nEnergy availability (intake − planned exercise, per kg fat-free mass):")
+        for k, lab in (("training", "training day"), ("rest", "rest day"), ("week_avg", "week average")):
+            L.append(f"- {lab}: {energy.describe(ea[k])}")
     for n in r.get("notes", []):
         L.append(f"\nNote: {n}")
     L.append(f"\nSport guideline for carbs: {lo}–{hi} g/kg on training days. Water ≈ {r['water_l']} L/day plus drinks around sessions.")

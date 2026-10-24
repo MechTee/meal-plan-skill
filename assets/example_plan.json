@@ -31,7 +31,7 @@
   "salt_max": 6,
   "micros": {
    "iodine_ug": {
-    "floor": 200,
+    "floor": 150,
     "aim": 200,
     "ul": 600,
     "supplement": 133,
@@ -84,6 +84,12 @@
     "aim": 500,
     "ul": null
    }
+  },
+  "reference": {
+   "name": "DGE/ÖGE reference values for nutrient intake, 3rd edition (2025)",
+   "population": "adults 25–<51 years, not pregnant or breastfeeding",
+   "checked": "2026-10-24",
+   "url": "https://www.dge.de/wissenschaft/referenzwerte/"
   }
  },
  "ingredients": {

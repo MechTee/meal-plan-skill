@@ -45,7 +45,9 @@ and lists every unknown key reference.
                            "supplement_note": "400 µg tablet every 3rd day"}}
 }
 ```
-`micros` keys are the nutrient keys below; take them from `targets.py` output. `supplement` is a
+`micros` keys are the nutrient keys below; take them from `targets.py` output, together with
+`targets.reference` (the reference edition and population the floors come from — the check report
+prints it). `supplement` is a
 daily average and is added to food in checks and in the workbook ("Supplements / day" row).
 
 ## ingredients

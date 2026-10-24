@@ -52,8 +52,8 @@ class TrainingDays(unittest.TestCase):
         for bad in (8, -1, 0):
             with self.assertRaises(ValueError, msg=bad):
                 targets.compute(dict(BASE, training_days=bad, sessions=[dict(RUN, per_week=3), dict(LIFT, per_week=3)]))
-        with self.assertRaises(ValueError):
-            targets.compute(dict(BASE, training_days=2, sessions=[dict(RUN, per_week=3), dict(LIFT, per_week=1)]))
+        with self.assertRaises(ValueError):   # more training days than sessions to put on them
+            targets.compute(dict(BASE, training_days=5, sessions=[dict(RUN, per_week=3), dict(LIFT, per_week=1)]))
         with self.assertRaises(ValueError):
             targets.compute(dict(BASE, sessions=[dict(RUN, days=["Mon", "Funday"])]))
 
@@ -66,6 +66,26 @@ class TrainingDays(unittest.TestCase):
     def test_single_type_unchanged(self):
         r = targets.compute(dict(BASE, sessions=[dict(LIFT, per_week=4)]))
         self.assertEqual(r["training_days"], 4)
+        self.assertRebuildsWeek(r)
+
+    def test_explicit_count_allows_low_frequency_doubles(self):
+        """Review on PR #36: four sessions of one type on two days (twice-daily) with an explicit count."""
+        r = targets.compute(dict(BASE, training_days=2, sessions=[dict(LIFT, per_week=4)]))
+        self.assertEqual(r["training_days"], 2)
+        self.assertRebuildsWeek(r)
+        r = targets.compute(dict(BASE, training_days=2, sessions=[dict(RUN, per_week=3), dict(LIFT, per_week=1)]))
+        self.assertEqual(r["training_days"], 2)
+        self.assertRebuildsWeek(r)
+
+    def test_fractional_frequency_keeps_its_energy(self):
+        """Review on PR #36: one 120-minute easy run every two weeks must not vanish from the day split."""
+        r = targets.compute(dict(BASE, sessions=[dict(RUN, minutes=120, per_week=0.5)]))
+        self.assertEqual(r["training_days"], 1)
+        self.assertGreater(r["targets"]["training"]["kcal"], r["targets"]["rest"]["kcal"])
+        self.assertRebuildsWeek(r)
+        self.assertIn("fractional", r["training_day_basis"])
+        r = targets.compute(dict(BASE, sessions=[dict(RUN, per_week=2.5), dict(LIFT, per_week=2)]))
+        self.assertEqual(r["training_days"], 5)
         self.assertRebuildsWeek(r)
 
 

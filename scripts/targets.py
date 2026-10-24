@@ -20,7 +20,7 @@ Prints a markdown summary and writes targets.json in the plan.json "targets" sha
 Numbers are starting estimates: tell the athlete to adjust kcal from the 7-day weight
 average after 2–3 weeks (~±150 kcal per step).
 """
-import json, sys
+import math, json, sys
 
 MET = {  # Compendium of Physical Activities (Ainsworth 2011 / Herrmann 2024), gross METs
     "resistance_light": 3.5, "resistance_vigorous": 5.0, "powerlifting": 6.0, "hiit": 8.0,
@@ -111,18 +111,31 @@ def training_days(p):
             td = len(set(td))
         if not isinstance(td, int) or not 0 <= td <= 7:
             raise ValueError("training_days must be 0–7 (distinct days with any training)")
-        most = max(s["per_week"] for s in sessions)
-        if td == 0 or (most <= 7 and td < most):
-            raise ValueError(f"training_days={td} is fewer than a session type's {most} sessions per week")
+        total = sum(s["per_week"] for s in sessions)
+        # fewer days than sessions is fine (doubles); a day count with no sessions to fill it is not
+        if total > 0 and td == 0:
+            raise ValueError(f"training_days=0 but {total:g} sessions per week are listed")
+        if td > math.ceil(total - 1e-9):
+            raise ValueError(f"training_days={td} but only {total:g} sessions per week — every training day needs a session")
         return td, "training_days from the profile"
+    total = sum(s["per_week"] for s in sessions)
+    frac = abs(total - round(total)) > 1e-9
     if len(sessions) == 1:
         n = sessions[0]["per_week"]
         if n > 7:
             raise ValueError("more than 7 sessions of one type per week: give training_days (doubles)")
-        return int(n), "single session type"
-    n = min(7, int(sum(s["per_week"] for s in sessions)))
+        days = math.ceil(n - 1e-9)
+        return days, "single session type" + (FRACTION_NOTE if frac else "")
+    n = min(7, math.ceil(total - 1e-9))
     return n, (f"assumed {n} training days (session types on separate days); if some sessions share a day, "
-               "set training_days or each session's days — this changes the training-day vs rest-day split")
+               "set training_days or each session's days — this changes the training-day vs rest-day split"
+               + (FRACTION_NOTE if frac else ""))
+
+
+# a session every other week cannot sit on a fixed weekday of a one-week template: the day count is
+# rounded up and the weekly exercise energy is averaged over those days (nothing is dropped)
+FRACTION_NOTE = ("; fractional sessions per week are rounded up to whole training days and their weekly "
+                 "exercise energy is averaged over them")
 
 
 def compute(p):

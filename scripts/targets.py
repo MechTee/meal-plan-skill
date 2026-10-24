@@ -103,6 +103,11 @@ def population(p):
                                "equivalents) and need individual dietetic guidance")
     if 25 <= age < 51:
         return "exact", REFERENCE_POPULATION
+    if age < 19:
+        return "approximate", (f"age {age:g} is in the D-A-CH 15–<19 band — an adolescent band, not an adult one: "
+                               "calcium is 1,200 mg there (applied below), and energy and several vitamins and "
+                               "minerals also differ from the 25–<51 table — check every target against the 15–<19 "
+                               "values before using them; still growing, so no aggressive deficits or weight cutting")
     band = "19–<25" if age < 25 else ("51–<65" if age < 65 else "65+")
     return "approximate", (f"age {age:g} is in the D-A-CH {band} band; the built-in table is for 25–<51, and some values "
                            "differ by age (e.g. energy, vitamin B1/B2/niacin, and for 65+ protein ≥ 1.0 g/kg and fluid) — "
@@ -198,6 +203,9 @@ def compute(p):
                 why = "×1.8 for non-haem iron bioavailability (IOM); check ferritin"
             if sex == "female" and p.get("menstruating", True):
                 why += "; menstruating athletes: screen ferritin"
+        if k == "calcium_mg" and p["age"] < 19:
+            floor, aim = max(floor, 1200), max(aim, 1200)
+            why = "D-A-CH 15–<19 band: 1,200 mg"
         if k == "calcium_mg" and sex == "female" and p.get("low_energy_availability_risk"):
             aim = 1500
             why = "1,500 mg if low energy availability/amenorrhoea risk"

@@ -32,6 +32,20 @@ class Routing(unittest.TestCase):
         self.assertEqual(r["population"], "approximate")
         self.assertTrue(any("65+" in n for n in r["notes"]))
 
+    def test_eighteen_year_old_is_in_the_adolescent_band(self):
+        """Review on PR #37: age 18 belongs to D-A-CH 15–<19, not 19–<25, and calcium is 1,200 mg there."""
+        r = targets.compute(dict(ADULT, age=18))
+        self.assertTrue(r["supported"])
+        self.assertEqual(r["population"], "approximate")
+        notes = " ".join(r["notes"])
+        self.assertIn("15–<19", notes)
+        self.assertNotIn("19–<25", notes)
+        ca = r["targets"]["micros"]["calcium_mg"]
+        self.assertEqual((ca["floor"], ca["aim"]), (1200, 1200))
+        r = targets.compute(dict(ADULT, age=19))
+        self.assertIn("19–<25", " ".join(r["notes"]))
+        self.assertEqual(r["targets"]["micros"]["calcium_mg"]["floor"], 1000)
+
     def test_core_adult_is_exact(self):
         r = targets.compute(ADULT)
         self.assertEqual(r["population"], "exact")

@@ -8,7 +8,7 @@ Sheet layout (matches the format established in the user's project workbook):
 Inputs are blue (grams on day sheets, per-100 g values, targets), cross-sheet links are green,
 calculations are black. Every nutrient number is a live formula back to the Ingredients sheet,
 so editing a gram amount or a label value recalculates days, micros, amino acids and the week.
-Run the xlsx skill's recalc.py on the output afterwards and fix anything it reports.
+Run scripts/recalc.py on the output afterwards and fix anything it reports.
 """
 import sys, json
 from openpyxl import Workbook
@@ -120,14 +120,21 @@ def build_ingredients(wb, plan):
     return rows
 
 
+def day_title(plan, day):
+    """Sheet title of a template day, e.g. "Wednesday — Training (legs)" — also the day heading on Micros/EAA."""
+    d = plan["days"][day]
+    title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
+    if d.get("label") and d["label"] != M.DAYNAMES[day]:
+        title += d["label"][len(M.DAYNAMES[day]):]
+    return title
+
+
 def build_day(wb, plan, day):
     d = plan["days"][day]
     ws = wb.create_sheet(day)
     T = plan.get("targets", {})
     t = T.get(d.get("type", "training"), {})
-    title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
-    if d.get("label") and d["label"] != M.DAYNAMES[day]:
-        title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}{d['label'][len(M.DAYNAMES[day]):]}"
+    title = day_title(plan, day)
     put(ws, "A1", title, bold=True, size=13)
     free = T.get("free_kcal")
     put(ws, "A2", f"Target: {t.get('kcal', 0):,} kcal planned" + (f" (+{free} free)" if free else "") +

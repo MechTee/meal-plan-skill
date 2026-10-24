@@ -4,8 +4,9 @@ How to use: after the depth picker, go topic by topic. For each topic ask the **
 at Quick depth, Quick + **Standard** at Standard, all three tiers at Deep dive. **Skip** = use what
 memory/project already says, else the listed default, and say which defaults you took.
 
-Ask with `AskUserQuestion`, ≤ 4 questions per call, 2–4 options each (the athlete can always type
-"Other"). Put a known answer first as "(current)". Turn free numbers (weight, height) into a short
+Ask with `AskUserQuestion` when the host has it (≤ 4 questions per call, 2–4 options each; the
+athlete can always type "Other"). Without it, write the same questions as short numbered lists in a
+normal message. Put a known answer first as "(current)". Turn free numbers (weight, height) into a short
 plain-text question in your message instead of forcing options.
 
 ## Depth picker (two calls)

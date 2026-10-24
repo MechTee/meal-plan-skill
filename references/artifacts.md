@@ -30,7 +30,7 @@ Basis: BMR ≈ 1,940, maintenance ≈ 2,950, slight surplus. Adjust after 2–3 
 **Open questions** — 1–3 bullets
 ```
 
-Then `AskUserQuestion`: "Approve and build" (recommended when there are no flags) / "Change
+Then ask (structured question if available, else plain text): "Approve and build" (recommended when there are no flags) / "Change
 something" / "Show a full day in detail".
 
 ## Workbook (`build_workbook.py`)
@@ -49,24 +49,25 @@ Conventions: Arial; blue = inputs, green = cross-sheet links, black = formulas; 
 `#E8ECE6`; batch portions are expanded into scaled ingredient rows with the batch named in
 "Sub-group" so every gram is visible and editable.
 
-After building: run the xlsx skill's `recalc.py` (0 errors required) and spot-check three cells
-against `mealplan.py compute` output. If the athlete already has a workbook in this format and only
-wants it updated, edit theirs in place following the xlsx skill (keep their manual edits) instead of
-regenerating.
+After building: run `scripts/recalc.py` (0 errors required) and `scripts/check_workbook.py`
+(workbook vs engine). If the athlete already has a workbook in this format and only
+wants it updated, edit theirs in place (keep their manual edits and formulas; openpyxl
+`insert_rows` does not adjust formula references, so insert rows with LibreOffice or rebuild the
+affected sheet) instead of regenerating.
 
 ## Shopping list (`render_pages.py` → `shopping-list.html` + `shopping-list.md`)
 
-HTML artifact: header with weekly / cycle / first-cycle cost; cycle selector (dates shift by the
+HTML page: header with weekly / cycle / first-cycle cost; cycle selector (dates shift by the
 cycle length, ticks are stored per cycle); filters (upcoming, all, stock-up, batch, fresh); one card
 per dated run, the next run opened and marked; items grouped by category with packs, pack label,
 cost, shop, amount used, alternating-buy and "lasts ~N cycles" notes and links; recipe quick
-reference; notes. Ticks persist in the viewer's browser; for cross-device sync add the shared-state
-capability (load `artifact-capabilities` first).
+reference; notes. Ticks persist in the viewer's browser; cross-device sync needs a host feature
+for shared state.
 
 Markdown (`shopping-list.md`): checkbox list per run with the same data plus the portions-per-cycle
-table, cost table and recipe quick reference. If a Project is attached, write it there with
-`Projects project_write` (path `claude/shopping-list-<N>-weeks.md`, replacing an older version
-after reading it) and keep a one-line dated changelog in `meta.changelog`.
+table, cost table and recipe quick reference. If the host has project docs, save it there (e.g.
+`shopping-list-<N>-weeks.md`, replacing an older version after reading it) and keep a one-line
+dated changelog in `meta.changelog`.
 
 ## Cooking pages (`render_pages.py` → `<recipe>.html`, `cook-<session>.html`)
 
@@ -78,7 +79,6 @@ with timers and a keep-screen-on button, amino-acid panel (protein vs 0.3–0.4 
 Page data (`const D`) is produced by the script; to customise a page, change `plan.json`
 (`desc`, `notes`, `prep`, `steps`, `when`, `tag`, `accent`) and re-render — don't hand-edit HTML.
 
-Publishing: one Artifact per page; titles = recipe titles; icon `recipe` (pages) and `cart`
-(shopping list); a short description per page ("Batch recipe · 5 portions · lean"). Republish to the
-same URLs on later changes (keep the artifact URL ↔ recipe key mapping in the Project or in
-`meta.artifacts`).
+Delivery: one page per recipe/session plus the shopping list. With a publishing tool, use the recipe
+titles as page titles and republish to the same URLs on later changes (keep the URL ↔ recipe key
+mapping in `meta.pages`). Without one, deliver the HTML files.

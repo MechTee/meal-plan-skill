@@ -219,7 +219,10 @@ class Acc:
         return {"n": {k: round(self.n.get(k, 0.0), nd) for k in NUTRIENTS},
                 "forms": {k: round(self.n.get(k, 0.0), nd) for k in FORM_KEYS},
                 "aa": {a: round(self.aa.get(a, 0.0), nd) for a in AAS},
-                "score": self.score(), "mshare": self.mshare()}
+                "score": self.score(), "mshare": self.mshare(),
+                # unfiltered and unrounded: grams of food with an unknown amount of each form. mshare is for
+                # display and drops shares ≤ 0.1 %; limit checks must see even a pinch of a fortified food.
+                "form_missing_g": {k: self.miss[k] for k in FORM_KEYS if self.miss.get(k, 0) > 0}}
 
 
 def recipe_acc(plan, rkey):
@@ -578,7 +581,7 @@ def limit_check(res, key, lim, L):
                 "status": "above" if peak > ul else "ok", "reason": ""}
     label = FORMS.get(basis, (None, basis))[1]
     food = max(res["days"][d]["total"]["forms"].get(basis, 0) for d in WEEKDAYS)
-    miss = max(res["days"][d]["total"]["mshare"].get(basis, 0) for d in WEEKDAYS)
+    miss = max(res["days"][d]["total"].get("form_missing_g", {}).get(basis, 0) for d in WEEKDAYS)
     forms = lim.get("supplement_forms") or {}
     if basis in forms:
         s_form = float(forms[basis])
@@ -597,7 +600,8 @@ def limit_check(res, key, lim, L):
                 "reason": f"{label} limit {ul:g} — supplement form unknown (set supplement_forms.{basis})"}
     if miss > 0:   # strict: any food with an unknown amount of this form could carry it over the limit
         return {**out, "status": "unresolved",
-                "reason": f"{label} limit {ul:g} — {miss:.0%} of the food has no {basis} value"}
+                "reason": f"{label} limit {ul:g} — {fmt_num(round(miss, 3)) if miss >= 0.001 else '< 0.001'} g of food "
+                          f"per day has no {basis} value"}
     return {**out, "status": "ok", "reason": ""}
 
 

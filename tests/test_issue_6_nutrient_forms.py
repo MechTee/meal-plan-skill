@@ -82,6 +82,14 @@ class PreformedVitaminA(unittest.TestCase):
         _, r = row(with_test_food({"vitA_rae_ug": 4000}), "vitA_rae_ug")
         self.assertIn("UL unresolved", r["status"])
 
+    def test_tiny_amount_of_unknown_food_still_unresolved(self):
+        """Review on PR #30: 0.1 g of food with unknown retinol is ≤ 0.1 % of the day's mass, which mshare drops."""
+        p = with_test_food({"vitA_rae_ug": 4000}, grams=0.1)
+        res, r = row(p, "vitA_rae_ug")
+        share = max(res["days"][d]["total"]["mshare"].get("retinol_ug", 0) for d in M.WEEKDAYS)
+        self.assertEqual(share, 0)                         # the display share hides it …
+        self.assertIn("UL unresolved", r["status"])        # … the limit check does not
+
     def test_preformed_retinol_above_limit_is_flagged(self):
         _, r = row(with_test_food({"vitA_rae_ug": 4000, "retinol_ug": 4000}, origin="animal"), "vitA_rae_ug")
         self.assertTrue(r["status"].startswith("ABOVE UL"))

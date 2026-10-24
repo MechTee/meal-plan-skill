@@ -39,6 +39,28 @@ class SessionPages(unittest.TestCase):
         self.assertEqual(a_pages[0]["when"], "Sun · weeks 1, 3")
         self.assertEqual(len(a_pages[0]["session_ids"]), 2)
 
+    def test_every_week_definition_stays_every_week_when_merged(self):
+        """Review on PR #47: an omitted/empty weeks list means every week; merging must keep that."""
+        p = copy.deepcopy(BASE)
+        a = p["cycle"]["sessions"][0]
+        a.pop("weeks", None)                                         # every week
+        p["cycle"]["sessions"].append(dict(copy.deepcopy(a), weeks=[2]))   # identical, week 2 only
+        pages = [x for x in R.cookday_pages(p) if "Sunday A" in x["title"]]
+        self.assertEqual(len(pages), 1)
+        self.assertEqual(pages[0]["when"], "Sun · every week")
+        p["cycle"]["sessions"][-1]["weeks"] = []                     # empty list = every week, too
+        p["cycle"]["sessions"][0]["weeks"] = [1, 3]
+        pages = [x for x in R.cookday_pages(p) if "Sunday A" in x["title"]]
+        self.assertEqual(pages[0]["when"], "Sun · every week")
+
+    def test_explicit_weeks_covering_the_cycle_read_every_week(self):
+        p = copy.deepcopy(BASE)
+        a = p["cycle"]["sessions"][0]
+        a["weeks"] = [1, 3]
+        p["cycle"]["sessions"].append(dict(copy.deepcopy(a), weeks=[2, 4]))
+        pages = [x for x in R.cookday_pages(p) if "Sunday A" in x["title"]]
+        self.assertEqual(pages[0]["when"], "Sun · every week")
+
     def test_slug_collision_gets_distinct_files(self):
         pages = R.cookday_pages(labelled("Sunday A", "sunday-a"))
         self.assertEqual(len({p["id"] for p in pages}), 2)

@@ -74,15 +74,20 @@ def session_groups(plan):
     Definitions that are identical apart from their weeks are grouped into one page; different
     definitions always get their own page, even when they share a label."""
     groups = []
+    every = list(range(1, M.cycle_weeks(plan) + 1))
     for i, s in enumerate(plan.get("cycle", {}).get("sessions", [])):
         sig = json.dumps({k: s.get(k) for k in ("label", "day", "prior", "cook", "steps", "prep", "notes")}, sort_keys=True)
+        weeks = set(s.get("weeks") or every)          # missing/empty weeks = every week of the cycle
         g = next((g for g in groups if g["sig"] == sig), None)
         if g:
-            g["weeks"] = sorted(set(g["weeks"]) | set(s.get("weeks") or []))
+            g["_weeks"] |= weeks
             g["ids"].append(s.get("id") or f"s{i + 1}")
             continue
         groups.append({"sig": sig, "session": s, "ids": [s.get("id") or f"s{i + 1}"],
-                       "weeks": list(s.get("weeks") or []), "label": s.get("label", "Cook day")})
+                       "_weeks": weeks, "label": s.get("label", "Cook day")})
+    for g in groups:   # back to the display form: [] means every week
+        w = sorted(g.pop("_weeks"))
+        g["weeks"] = [] if w == every else w
     # file names: from the label; when labels (or their slugs) repeat, add the weeks, then a counter
     base = {}
     for g in groups:

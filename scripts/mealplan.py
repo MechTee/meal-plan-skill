@@ -376,8 +376,10 @@ def shopping(plan, cycles=4):
     ING = plan["ingredients"]
     runs = _runs(plan)
     warnings = []
-    demand = defaultdict(lambda: defaultdict(float))
-    stock_need = defaultdict(float)
+    # demand[run_id][ingredient] = list of [day_offset, grams]: what that run must supply, and when it is
+    # eaten or cooked (day 0 = Monday of week 1). Dates matter: a purchase must come before use and
+    # the food must still be within its shelf life on the day it is used.
+    demand = defaultdict(lambda: defaultdict(list))
     fresh_by_week_day = {}
     for r in runs:
         if r["kind"] == "fresh":
@@ -387,17 +389,18 @@ def shopping(plan, cycles=4):
                 fresh_by_week_day[(r["week"], d)] = r["id"]
     batch_run_for = {(r["week"], r["day"], r["prior"]): r["id"] for r in runs if r["kind"] == "batch"}
 
-    def add(k, g, rid):
+    def add(k, g, rid, when):
         b = _buy(ING[k])
         if b == "none":
             return
         if b == "stock":
-            stock_need[k] += g
+            demand["stock"][k].append([when, g])
         elif rid:
-            demand[rid][k] += g
+            demand[rid][k].append([when, g])
 
     for w in range(1, W + 1):
         for day in WEEKDAYS:
+            when = _ordkey(w, day, False, 2)[0]
             for m in day_def(plan, w, day).get("meals", []):
                 for p in m.get("parts", []):
                     if "recipe" in p and plan["recipes"][p["recipe"]]["kind"] == "batch":
@@ -406,57 +409,81 @@ def shopping(plan, cycles=4):
                         rid = fresh_by_week_day.get((w, day))
                         if not rid and _buy(ING[k]) not in ("stock", "none"):
                             warnings.append(f"no fresh run covers week {w} {day} ({ING[k]['name']})")
-                        add(k, g, rid)
+                        add(k, g, rid, when)
     for s in sessions(plan):
         rid = batch_run_for[(s["week"], s["day"], s["prior"])]
+        when = _ordkey(s["week"], s["day"], s["prior"], 1)[0]
         for rk, n in s["cook"].items():
             for it in plan["recipes"][rk]["items"]:
                 k, amt, _, _ = _item(it)
-                add(k, amt * n, rid)
-    demand["stock"] = stock_need
+                add(k, amt * n, rid, when)
 
+    def label(off):
+        d = run_date(plan, 1, "Mon") + dt.timedelta(days=off) if plan.get("cycle", {}).get("start_date") else None
+        return d.isoformat() if d else f"day {off}"
+
+    # lots[k] = [[grams_left, bought_on, expires_on|None]]; a lot serves a use only if bought_on <= use <= expires_on
     lots = defaultdict(list)
     per_cycle = []
     for c in range(cycles):
         cyc = {}
+        shift = 7 * W * c
         for r in runs:
-            date = r["date"] + dt.timedelta(days=7 * W * c) if r["date"] else None
-            for k, need in demand.get(r["id"], {}).items():
-                if need <= 0:
+            bought_on = r["t"][0] + shift
+            for k, uses in demand.get(r["id"], {}).items():
+                uses = sorted([u + shift, g] for u, g in uses if g > 0)
+                if not uses:
                     continue
                 sh = ING[k].get("shop") or {}
-                if date:
-                    lots[k] = [l for l in lots[k] if l[1] is None or l[1] >= date]
+                shelf = int(sh["shelf_days"]) if sh.get("shelf_days") else None
+                lots[k] = [l for l in lots[k] if l[0] > 1e-6 and (l[2] is None or l[2] >= bought_on)]
                 have = sum(l[0] for l in lots[k])
+                # serve from earlier purchases that are still usable on the day of use
+                short = []
+                for u, g in uses:
+                    for l in lots[k]:
+                        if g <= 1e-9:
+                            break
+                        if l[1] <= u and (l[2] is None or u <= l[2]):
+                            take = min(l[0], g)
+                            l[0] -= take
+                            g -= take
+                    if g > 1e-9:
+                        short.append([u, g])
+                need_new = sum(g for _, g in short)
                 pack_amt = _pack_amount(ING[k])
-                short = max(0.0, need - have)
-                packs = math.ceil(short / pack_amt - 1e-9) if pack_amt else None
-                bought = packs * pack_amt if pack_amt else short
-                remaining = need
-                for l in lots[k]:
-                    take = min(l[0], remaining)
-                    l[0] -= take
-                    remaining -= take
-                lots[k] = [l for l in lots[k] if l[0] > 1e-6]
-                leftover = bought - remaining
+                packs = math.ceil(need_new / pack_amt - 1e-9) if pack_amt else None
+                bought = packs * pack_amt if pack_amt else need_new
+                expires = bought_on + shelf if shelf is not None else None
+                if c == 0:
+                    early = [u for u, _ in short if u < bought_on]
+                    late = [u for u, _ in short if expires is not None and u > expires]
+                    if early:
+                        warnings.append(f"{ING[k]['name']}: needed on {', '.join(label(u) for u in early)} but only bought on "
+                                        f"{label(bought_on)} ({r['label']}) — buy it earlier")
+                    if late:
+                        warnings.append(f"{ING[k]['name']}: used on {', '.join(label(u) for u in late)}, past its {shelf}-day "
+                                        f"shelf life after the {r['label']} on {label(bought_on)} — add a fresh run closer to those days")
+                leftover = bought - need_new
                 if leftover > 1e-6 and sh.get("carry", True):
-                    exp = date + dt.timedelta(days=int(sh["shelf_days"])) if (date and sh.get("shelf_days")) else None
-                    lots[k].append([leftover, exp])
-                cyc[(r["id"], k)] = (packs, have)
+                    lots[k].append([leftover, bought_on, expires])
+                cyc[(r["id"], k)] = (packs, have, sum(g for _, g in uses))
         per_cycle.append(cyc)
+    need_of = {(rid, k): sum(g for _, g in uses) for rid, dd in demand.items() for k, uses in dd.items()}
 
     out_runs = []
     till = 0.0
     prorated = 0.0
     for r in runs:
         items = []
-        for k, need in sorted(demand.get(r["id"], {}).items(), key=lambda kv: ING[kv[0]]["name"]):
+        for k in sorted(demand.get(r["id"], {}), key=lambda k: ING[k]["name"]):
+            need = need_of[(r["id"], k)]
             if need <= 0:
                 continue
             ingr = ING[k]
             sh = ingr.get("shop") or {}
             pack_amt = _pack_amount(ingr)
-            packs, have = per_cycle[0][(r["id"], k)]
+            packs, have, _ = per_cycle[0][(r["id"], k)]
             seq = [pc[(r["id"], k)][0] for pc in per_cycle]
             price = sh.get("price")
             it = {"key": k, "name": ingr["name"], "need": round(need, 1), "unit": ingr.get("unit", "g"),

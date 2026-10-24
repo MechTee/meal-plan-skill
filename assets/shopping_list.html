@@ -118,14 +118,18 @@ const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const safeUrl = u => { try { const x = new URL(String(u)); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : ""; } catch(e) { return ""; } };
 const cur = S.currency || "EUR";
 const money = v => v == null ? "" : new Intl.NumberFormat(S.locale || "de-DE", {style:"currency", currency:cur}).format(v);
-const DAY = 864e5;
-const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+// Calendar arithmetic on day numbers (days since 1970-01-01 in UTC), never on local milliseconds:
+// a local day is 23 or 25 hours long on daylight-saving changes, so adding n × 24 h can land on the wrong date.
+const dayNum = s => { const [y,m,d] = String(s).split("-").map(Number); return Date.UTC(y, m-1, d) / 864e5; };
+const localDayNum = dt => Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()) / 864e5;
+const fromDayNum = n => { const u = new Date(n * 864e5); return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate()); };
 const W = num(S.cycleWeeks) || 4;
-const today = new Date(); today.setHours(0,0,0,0);
+const todayNum = localDayNum(new Date());
 
-function cycleOf(date){ const c = Math.floor((date - parse(S.runs[0].date)) / (7*W*DAY)) + 1; return Math.max(1, c); }
-let state = Object.assign({ticks:{}, cycle: cycleOf(today), filter:"upcoming"}, store.get());
-const shift = (d, c) => new Date(parse(d).getTime() + (c-1)*7*W*DAY);
+function cycleOf(n){ return Math.max(1, Math.floor((n - dayNum(S.runs[0].date)) / (7*W)) + 1); }
+let state = Object.assign({ticks:{}, cycle: cycleOf(todayNum), filter:"upcoming"}, store.get());
+const shiftNum = (d, c) => dayNum(d) + (c-1)*7*W;          // day number of a run date in cycle c
+const shift = (d, c) => fromDayNum(shiftNum(d, c));        // local Date for display
 const fmtDate = d => d.toLocaleDateString(S.locale || "en-GB", {weekday:"short", day:"numeric", month:"short"});
 
 $("eyebrow").textContent = S.eyebrow || "Shopping list";
@@ -142,7 +146,7 @@ $("readout").innerHTML = `
 function renderCycles(){
   const n = Math.max(4, state.cycle + 1);
   $("cycles").innerHTML = `<span class="eyebrow">Cycle</span>` + Array.from({length:n}, (_,i)=>i+1).map(c => {
-    const a = shift(S.runs[0].date, c), b = new Date(a.getTime() + (7*W-1)*DAY);
+    const a = shift(S.runs[0].date, c), b = fromDayNum(shiftNum(S.runs[0].date, c) + 7*W - 1);
     return `<button class="chip" type="button" aria-pressed="${c===state.cycle}" data-c="${c}">${c} · ${a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}–${b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}</button>`;
   }).join("");
   $("cycles").querySelectorAll("button").forEach(b => b.onclick = () => { state.cycle = +b.dataset.c; store.set(state); render(); });
@@ -161,10 +165,10 @@ function packsFor(it){
 const openState = {};
 function render(){
   renderCycles(); renderFilters();
-  const runs = S.runs.map(r => ({...r, d: shift(r.date, state.cycle)}));
-  const nextIdx = runs.findIndex(r => r.d >= today);
+  const runs = S.runs.map(r => ({...r, n: shiftNum(r.date, state.cycle), d: shift(r.date, state.cycle)}));
+  const nextIdx = runs.findIndex(r => r.n >= todayNum);
   const html = runs.map((r, idx) => {
-    if (state.filter === "upcoming" && r.d < today && idx !== nextIdx) return "";
+    if (state.filter === "upcoming" && r.n < todayNum && idx !== nextIdx) return "";
     if (["stock","batch","fresh"].includes(state.filter) && r.kind !== state.filter) return "";
     const tk = state.ticks[`${state.cycle}:${r.id}`] || {};
     const items = r.items.filter(it => (packsFor(it) ?? 1) > 0);

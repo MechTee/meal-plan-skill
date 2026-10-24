@@ -118,6 +118,10 @@ footer{border-top:2px solid var(--fg);padding-top:16px;display:flex;flex-directi
 .mi small{font-family:var(--font-num);font-size:.72rem;color:var(--muted)}
 .sources{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
 .sources a{color:inherit}
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alerts[hidden]{display:none}
+.alert{margin:0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:var(--r);background:var(--surface)}
+.alert.warn{border-left-color:var(--low);font-weight:600}
 </style>
 </head>
 <body>
@@ -134,6 +138,7 @@ footer{border-top:2px solid var(--fg);padding-top:16px;display:flex;flex-directi
     <h1 id="title"></h1>
     <div class="meta" id="meta"></div>
     <p class="desc" id="desc"></p>
+    <div class="alerts" id="alerts" role="note" aria-label="Allergy check" hidden></div>
     <div class="tabs" id="tabs" role="tablist" aria-label="Variant"></div>
     <div class="readout" id="readout"></div>
   </header>
@@ -187,6 +192,9 @@ const fmt = (v, d=0) => (Math.round(v * 10**d) / 10**d).toLocaleString("en-GB", 
 $("title").textContent = D.title;
 $("kind").textContent = D.kind;
 $("desc").textContent = D.desc;
+const alertList = D.alerts || [];
+$("alerts").hidden = !alertList.length;
+$("alerts").innerHTML = alertList.map(a => `<p class="alert ${a.level === "warn" ? "warn" : ""}"><strong>${a.level === "warn" ? "⚠ Allergy check: " : "Allergies: "}</strong>${esc(a.text)}</p>`).join("");
 $("meta").innerHTML = `<span>${esc(D.when)}</span><span>${esc(D.serves)}</span>`;
 
 function renderTabs(){

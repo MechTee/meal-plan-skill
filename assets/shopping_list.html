@@ -76,6 +76,10 @@ section.ref{display:flex;flex-direction:column;gap:10px}
 .ref dt{font-weight:700}
 .ref dd{margin:0;color:var(--muted);font-size:.95rem}
 .notes{margin:0;padding-left:1.1em;color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:6px}
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alerts[hidden]{display:none}
+.alert{margin:0;padding:10px 14px;border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:var(--r);background:var(--surface)}
+.alert.warn{border-left-color:var(--low);font-weight:600}
 </style>
 </head>
 <body>
@@ -84,6 +88,7 @@ section.ref{display:flex;flex-direction:column;gap:10px}
     <div class="eyebrow" id="eyebrow"></div>
     <h1 id="title"></h1>
     <p class="desc" id="desc"></p>
+    <div class="alerts" id="alerts" role="note" aria-label="Allergy check" hidden></div>
     <div class="readout" id="readout"></div>
   </header>
   <div class="bar" role="group" aria-label="Cycle" id="cycles"></div>
@@ -122,6 +127,9 @@ const fmtDate = d => d.toLocaleDateString(S.locale || "en-GB", {weekday:"short",
 $("eyebrow").textContent = S.eyebrow || "Shopping list";
 $("title").textContent = S.title;
 $("desc").textContent = S.desc || "";
+const alertList = S.alerts || [];
+$("alerts").hidden = !alertList.length;
+$("alerts").innerHTML = alertList.map(a => `<p class="alert ${a.level === "warn" ? "warn" : ""}"><strong>${a.level === "warn" ? "⚠ Allergy check: " : "Allergies: "}</strong>${esc(a.text)}</p>`).join("");
 $("readout").innerHTML = `
   <div><b>${money(S.costs.weekly)}</b><span>per week</span></div>
   <div><b>${money(S.costs.cycle)}</b><span>per ${W}-week cycle</span></div>

@@ -542,6 +542,31 @@ def used_ingredients(plan):
     return used
 
 
+def scanned_ingredients(plan):
+    """Everything the allergy check must cover: every ingredient eaten or cooked in the cycle plus every
+    ingredient of every recipe in plan.recipes — render_pages publishes all of them (recipe pages and the
+    shopping list's quick reference), including recipes no longer on the schedule."""
+    keys = used_ingredients(plan)
+    for r in plan.get("recipes", {}).values():
+        for it in r.get("items", []):
+            keys.add(_item(it)[0])
+    return keys
+
+
+def allergy_alerts(plan):
+    """Allergy lines every generated output shows prominently (pages, shopping lists, workbook).
+    [{"level": "warn"|"info", "text": …}] — warn while the status is unknown or the check has findings."""
+    a = allergy_check(plan)
+    if a["status"] == "unknown":
+        return [{"level": "warn", "text": "Allergies and intolerances NOT CONFIRMED — check every ingredient "
+                                          "with the athlete before cooking or buying anything on this page."}]
+    out = [{"level": "warn", "text": f} for f in a["flags"]]
+    if a["status"] == "known":
+        out.append({"level": "info", "text": "Planned free of: " + ", ".join(a["items"]) +
+                    ". Check the label of every pack you buy — recipes and factories change."})
+    return out
+
+
 def allergy_check(plan):
     """Allergy findings. Every flag here is blocking: resolve before the plan is approved or cooked."""
     al = plan.get("meta", {}).get("allergies") or {"status": "unknown"}
@@ -555,7 +580,7 @@ def allergy_check(plan):
         return out
     want = set(out["items"])
     traces_matter = al.get("traces_matter", True)
-    for k in sorted(used_ingredients(plan)):
+    for k in sorted(scanned_ingredients(plan)):
         ing = plan["ingredients"][k]
         if "allergens" not in ing:
             out["unchecked"].append(ing["name"])

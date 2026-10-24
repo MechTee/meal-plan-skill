@@ -75,6 +75,75 @@ class AllergyBinding(unittest.TestCase):
         self.assertNotIn("Soy chunks, dry", {c["ingredient"] for c in M.compute(p)["checks"]["allergies"]["conflicts"]})
 
 
+class AllPublishedRecipesScanned(unittest.TestCase):
+    """Review on PR #26: recipes kept in plan.recipes are still published, so they must be scanned."""
+    def test_unscheduled_recipe_is_still_checked(self):
+        p = plan_with({"status": "known", "items": ["soy"]})
+        for rk in ("dal", "chili", "curry", "bolo"):
+            p["recipes"][rk]["items"] = [it for it in p["recipes"][rk]["items"] if it[0] != "chunks"]
+        p["ingredients"]["isolate"]["allergens"] = []  # isolate out of the picture
+        self.assertNotIn("Soy chunks, dry", {c["ingredient"] for c in M.compute(p)["checks"]["allergies"]["conflicts"]})
+        # a retired recipe nobody eats or cooks any more, still in plan.recipes
+        p["recipes"]["old_stew"] = {"title": "Old stew", "kind": "single", "items": [["chunks", 80]], "steps": []}
+        conflicts = {c["ingredient"] for c in M.compute(p)["checks"]["allergies"]["conflicts"]}
+        self.assertIn("Soy chunks, dry", conflicts)
+
+
+class AlertsInOutputs(unittest.TestCase):
+    """Review on PR #26: the allergy status reaches every deliverable, not only the check report."""
+    @classmethod
+    def setUpClass(cls):
+        import render_pages as R
+        cls.R = R
+
+    def outputs(self, p):
+        comp = M.compute(p)
+        R = self.R
+        return {"recipe": R.recipe_data(p, comp, "dal")["alerts"],
+                "cookday": [c["alerts"] for c in R.cookday_pages(p)],
+                "shopping": R.shopping_data(p, comp)["alerts"],
+                "markdown": R.shopping_markdown(p, comp)}
+
+    def test_unknown_status_warns_everywhere(self):
+        o = self.outputs(plan_with({"status": "unknown"}))
+        self.assertEqual(o["recipe"][0]["level"], "warn")
+        self.assertIn("NOT CONFIRMED", o["recipe"][0]["text"])
+        self.assertTrue(o["cookday"] and all(c and c[0]["level"] == "warn" for c in o["cookday"]))
+        self.assertEqual(o["shopping"][0]["level"], "warn")
+        self.assertIn("⚠ Allergy:** Allergies and intolerances NOT CONFIRMED", o["markdown"])
+
+    def test_conflict_and_known_status_are_shown(self):
+        o = self.outputs(plan_with({"status": "known", "items": ["soy"]}))
+        texts = [a["text"] for a in o["shopping"]]
+        self.assertTrue(any(t.startswith("ALLERGEN CONFLICT") for t in texts))
+        self.assertTrue(any(t.startswith("Planned free of: soy") for t in texts))
+
+    def test_confirmed_none_shows_nothing(self):
+        o = self.outputs(plan_with({"status": "none", "items": []}))
+        self.assertEqual(o["recipe"], [])
+        self.assertEqual(o["shopping"], [])
+        self.assertNotIn("Allergy", o["markdown"])
+
+    def test_templates_render_the_banner(self):
+        for t in ("recipe_page.html", "shopping_list.html"):
+            with open(os.path.join(ROOT, "assets", t), encoding="utf-8") as f:
+                html = f.read()
+            self.assertIn('id="alerts"', html, t)
+            self.assertIn(".alerts", html, t)
+
+    def test_workbook_shows_the_warning(self):
+        import tempfile
+        import build_workbook as B
+        from openpyxl import load_workbook
+        p = plan_with({"status": "unknown"})
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "plan.xlsx")
+            B.build(p, out)
+            a3 = load_workbook(out)["Week summary"]["A3"].value
+        self.assertTrue(a3.startswith("ALLERGY:"), a3)
+        self.assertIn("NOT CONFIRMED", a3)
+
+
 class InterviewInstructions(unittest.TestCase):
     def test_safety_screen_asks_allergies_regardless_of_depth(self):
         with open(os.path.join(ROOT, "references", "interview.md"), encoding="utf-8") as f:

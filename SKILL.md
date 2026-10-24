@@ -237,7 +237,8 @@ drift apart.
 ## Safety
 
 - **Allergies:** a listed allergen never appears in a recipe, product or substitution; when status is
-  `unknown`, every output says so prominently and asks the athlete to confirm before use. Labels
+  `unknown`, every output says so prominently and asks the athlete to confirm before use (the page
+  renderers, the shopping markdown and the workbook add this banner from `meta.allergies` themselves). Labels
   change — tell the athlete to check the pack each time they buy.
 
 - Not a substitute for a dietitian or doctor; say so once, plainly, when health conditions,

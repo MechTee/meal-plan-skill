@@ -21,7 +21,7 @@ sys.path.insert(0, __import__("os").path.dirname(__file__))
 import mealplan as M
 
 FONT = "Arial"
-BLUE, GREEN, BLACK, GREY = "0000FF", "008000", "000000", "666666"
+BLUE, GREEN, BLACK, GREY, RED = "0000FF", "008000", "000000", "666666", "C00000"
 HDR_FILL = PatternFill("solid", fgColor="E8ECE6")
 MEAL_FILL = PatternFill("solid", fgColor="F4F6F2")
 TOT_FILL = PatternFill("solid", fgColor="D9DFD6")
@@ -287,7 +287,13 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     put(ws, "A2", "Day values link to the day sheets (green). Blue = targets from the plan plus general references "
                   "(fiber ≥ 30 g, salt ≤ 6 g).", color=GREY, italic=True)
     notes = plan.get("meta", {}).get("workbook_notes", [])
-    if notes:
+    alerts = M.allergy_alerts(plan)
+    if alerts:  # the allergy line takes row 3; plan notes move up beside the legend
+        put(ws, "A3", "ALLERGY: " + " · ".join(a["text"] for a in alerts),
+            color=RED if any(a["level"] == "warn" for a in alerts) else BLACK, bold=True)
+        if notes:
+            ws["A2"].value += " · " + " · ".join(notes)
+    elif notes:
         put(ws, "A3", " · ".join(notes), color=GREY, italic=True)
     heads = ["Day", "Type"] + [h for _, h, _ in MAC_COLS] + ["kcal target", "Δ kcal", "Protein target", "Δ protein", "Fiber min", "Salt max"]
     for i, h in enumerate(heads, 1):

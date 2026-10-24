@@ -7,7 +7,7 @@ session, and the dated shopping list.
 Each page is a self-contained HTML file ready to publish with the Artifact tool (one artifact per
 page, so each can be opened on a phone in the kitchen or at the shop).
 """
-import sys, os, json, argparse
+import sys, os, re, json, argparse
 sys.path.insert(0, os.path.dirname(__file__))
 import mealplan as M
 
@@ -84,7 +84,7 @@ def cookday_pages(plan):
         steps = s.get("steps") or [[f"Cook the {t} — follow its own page.", None] for t in titles]
         ports = sum(float(plan["recipes"][rk]["portions"]) * n for rk, n in s["cook"].items() if plan["recipes"][rk].get("storage_units") is None)
         wk = s.get("weeks")
-        seen[lab] = {"id": "cook-" + lab.lower().replace(" ", "-"), "title": f"{lab} — cook day", "kind": "Cook-day plan",
+        seen[lab] = {"id": "cook-" + slug(lab), "title": f"{lab} — cook day", "kind": "Cook-day plan",
                      "when": f"{s.get('day', 'Sun')}" + (f" · weeks {', '.join(map(str, wk))}" if wk else " · every week"),
                      "serves": f"{M.fmt_num(ports)} portions + extras",
                      "desc": "Everything cooked in this session: " + ", ".join(titles) + ".",
@@ -169,6 +169,56 @@ def shopping_markdown(plan, comp):
     return "\n".join(out)
 
 
+RESERVED = {"shopping-list"}
+
+
+class OutputError(Exception):
+    pass
+
+
+def slug(text):
+    """Filesystem-safe page name: lower-case letters, digits, '-' and '_' only (no dots, slashes or drive
+    letters, so a plan key can never point outside the output directory)."""
+    s = re.sub(r"[^a-z0-9_-]+", "-", str(text).lower()).strip("-_")
+    return s or "page"
+
+
+def plan_pages(plan, include_recipes=True, include_cookdays=True, include_shopping=True, only=None):
+    """Map every page to a unique, safe file name. Raises OutputError on collisions (including recipe keys that
+    differ only in case or punctuation, and names that clash with the shopping list or cook-day pages)."""
+    pages, owner = [], {}
+
+    def claim(name, what):
+        if name in owner:
+            raise OutputError(f"{what} and {owner[name]} would both be written to {name}.html — rename one of them")
+        owner[name] = what
+        return name
+
+    if include_recipes:
+        for rk in plan["recipes"]:
+            if only and rk not in only:
+                continue
+            name = slug(rk)
+            if name in RESERVED:
+                raise OutputError(f"recipe key {rk!r} clashes with the reserved page name {name!r}")
+            pages.append(("recipe", rk, claim(name, f"recipe {rk!r}")))
+    if include_cookdays and not only:
+        for d in cookday_pages(plan):
+            pages.append(("cookday", d, claim(d["id"], f"cook-day page {d['title']!r}")))
+    if include_shopping and not only:
+        pages.append(("shopping", None, claim("shopping-list", "the shopping list")))
+    return pages
+
+
+def safe_path(out_dir, name, ext):
+    """Join and verify the destination stays inside out_dir (defence in depth on top of slug())."""
+    root = os.path.realpath(out_dir)
+    path = os.path.realpath(os.path.join(root, name + ext))
+    if os.path.dirname(path) != root:
+        raise OutputError(f"refusing to write outside {root}: {path}")
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("plan")
@@ -181,28 +231,34 @@ def main():
     comp = json.loads(json.dumps(M.compute(plan), default=M._json_default))
     os.makedirs(a.out_dir, exist_ok=True)
     only = set(a.only.split(",")) if a.only else None
+    try:
+        pages = plan_pages(plan, include_cookdays=not a.no_cookdays, include_shopping=not a.no_shopping, only=only)
+    except OutputError as e:
+        print(f"OUTPUT ERROR: {e}")
+        sys.exit(1)
     written = []
-    for i, rk in enumerate(plan["recipes"]):
-        if only and rk not in only:
-            continue
-        r = plan["recipes"][rk]
-        acc = tuple(r["accent"]) if r.get("accent") else ACCENTS[i % len(ACCENTS)]
-        path = os.path.join(a.out_dir, f"{rk}.html")
-        open(path, "w", encoding="utf-8").write(fill("recipe_page.html", r["title"], recipe_data(plan, comp, rk), acc))
-        written.append(path)
-    if not a.no_cookdays and not only:
-        for j, d in enumerate(cookday_pages(plan)):
-            path = os.path.join(a.out_dir, f"{d['id']}.html")
-            open(path, "w", encoding="utf-8").write(fill("recipe_page.html", d["title"], d, ACCENTS[(j + 3) % len(ACCENTS)]))
+    recipe_index = {rk: i for i, rk in enumerate(plan["recipes"])}
+    j = 0
+    for kind, ref, name in pages:
+        if kind == "recipe":
+            r = plan["recipes"][ref]
+            acc = tuple(r["accent"]) if r.get("accent") else ACCENTS[recipe_index[ref] % len(ACCENTS)]
+            path = safe_path(a.out_dir, name, ".html")
+            open(path, "w", encoding="utf-8").write(fill("recipe_page.html", r["title"], recipe_data(plan, comp, ref), acc))
             written.append(path)
-    if not a.no_shopping and not only:
-        sd = shopping_data(plan, comp)
-        path = os.path.join(a.out_dir, "shopping-list.html")
-        open(path, "w", encoding="utf-8").write(fill("shopping_list.html", sd["title"], sd, ACCENTS[3]))
-        written.append(path)
-        path = os.path.join(a.out_dir, "shopping-list.md")
-        open(path, "w", encoding="utf-8").write(shopping_markdown(plan, comp))
-        written.append(path)
+        elif kind == "cookday":
+            path = safe_path(a.out_dir, name, ".html")
+            open(path, "w", encoding="utf-8").write(fill("recipe_page.html", ref["title"], ref, ACCENTS[(j + 3) % len(ACCENTS)]))
+            j += 1
+            written.append(path)
+        else:
+            sd = shopping_data(plan, comp)
+            path = safe_path(a.out_dir, name, ".html")
+            open(path, "w", encoding="utf-8").write(fill("shopping_list.html", sd["title"], sd, ACCENTS[3]))
+            written.append(path)
+            path = safe_path(a.out_dir, name, ".md")
+            open(path, "w", encoding="utf-8").write(shopping_markdown(plan, comp))
+            written.append(path)
     print("\n".join(written))
 
 

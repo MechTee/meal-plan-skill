@@ -7,7 +7,8 @@ profile.json (anything missing falls back to a stated default):
 {
   "sex": "male"|"female", "age": 32, "height_cm": 187, "weight_kg": 87, "bodyfat_pct": 13,
   "occupation": "desk"|"standing"|"manual", "steps_per_day": 10000,
-  "sessions": [{"type": "resistance_vigorous", "minutes": 75, "per_week": 6}],
+  "sessions": [{"type": "resistance_vigorous", "minutes": 75, "per_week": 6, "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]}],
+  "training_days": 6,                      (distinct days with any training, 0–7; or give "days" per session)
   "goal": "cut"|"maintain"|"recomp"|"lean_gain"|"gain", "rate_pct_bw_per_week": 0.5,
   "sport_focus": "strength"|"hypertrophy"|"endurance"|"team"|"mixed",
   "diet": "omnivore"|"pescatarian"|"vegetarian"|"vegan",
@@ -77,6 +78,53 @@ def bmr(p):
     return out
 
 
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def training_days(p):
+    """Number of DISTINCT days with any training (0–7) and how it was determined.
+
+    Sessions are not days: three runs plus three lifts can be six training days or three days with
+    doubles. Priority: per-session "days" lists (their union) → profile "training_days" → a single
+    session type (its per_week) → otherwise assume separate days and say so."""
+    sessions = p.get("sessions", [])
+    for s in sessions:
+        if s.get("days"):
+            bad = [d for d in s["days"] if d not in DAYS]
+            if bad:
+                raise ValueError(f"session {s.get('type')}: unknown days {bad} (use {DAYS})")
+            if len(set(s["days"])) != len(s["days"]):
+                raise ValueError(f"session {s.get('type')}: a day is listed twice — use per_week for two sessions a day")
+            s.setdefault("per_week", len(s["days"]))
+        if not isinstance(s.get("per_week"), (int, float)) or s["per_week"] < 0:
+            raise ValueError(f"session {s.get('type')}: per_week must be a number ≥ 0")
+    if not sessions:
+        return 0, "no sessions"
+    if all(s.get("days") for s in sessions):
+        days = set().union(*(s["days"] for s in sessions))
+        return len(days), "union of the sessions' days: " + ", ".join(d for d in DAYS if d in days)
+    td = p.get("training_days")
+    if td is not None:
+        if isinstance(td, list):
+            if not set(td) <= set(DAYS):
+                raise ValueError(f"training_days: unknown days {sorted(set(td) - set(DAYS))}")
+            td = len(set(td))
+        if not isinstance(td, int) or not 0 <= td <= 7:
+            raise ValueError("training_days must be 0–7 (distinct days with any training)")
+        most = max(s["per_week"] for s in sessions)
+        if td == 0 or (most <= 7 and td < most):
+            raise ValueError(f"training_days={td} is fewer than a session type's {most} sessions per week")
+        return td, "training_days from the profile"
+    if len(sessions) == 1:
+        n = sessions[0]["per_week"]
+        if n > 7:
+            raise ValueError("more than 7 sessions of one type per week: give training_days (doubles)")
+        return int(n), "single session type"
+    n = min(7, int(sum(s["per_week"] for s in sessions)))
+    return n, (f"assumed {n} training days (session types on separate days); if some sessions share a day, "
+               "set training_days or each session's days — this changes the training-day vs rest-day split")
+
+
 def compute(p):
     p = dict(p)
     p.setdefault("sex", "male"); p.setdefault("occupation", "desk"); p.setdefault("steps_per_day", 7000)
@@ -86,6 +134,8 @@ def compute(p):
     b = bmr(p)
     base = b["used"] * BASE_PAL.get(p["occupation"], 1.25)
     steps = 0.00042 * w * max(0, p["steps_per_day"] - 3000)
+    p["sessions"] = [dict(x) for x in p.get("sessions", [])]   # don't mutate the caller's profile
+    n_train, day_basis = training_days(p)                     # validates and fills per_week from days
     sess_week = 0.0
     sess_day = []
     for s in p["sessions"]:
@@ -93,8 +143,10 @@ def compute(p):
         kcal = (met - 1) * w * s["minutes"] / 60
         sess_week += kcal * s["per_week"]
         sess_day.append(kcal)
-    n_train = max([s["per_week"] for s in p["sessions"]] or [0])
-    train_extra = sess_week / n_train if n_train else 0
+    notes = []
+    if day_basis.startswith("assumed"):
+        notes.append(day_basis)
+    train_extra = sess_week / n_train if n_train else 0   # average exercise on a training day
     tdee_rest = base + steps
     tdee_train = tdee_rest + train_extra
     tdee_avg = tdee_rest + sess_week / 7
@@ -125,7 +177,6 @@ def compute(p):
     fat_pct = p.get("fat_pct") or 0.25
     fat = round(max(fat_pct * (kcal_train + kcal_rest) / 2 / 9, 0.8 * w))
     carb_guide = {"strength": (4, 7), "hypertrophy": (4, 7), "team": (5, 8), "endurance": (6, 10), "mixed": (4, 7)}[p["sport_focus"]]
-    notes = []
     carb_t = round((kcal_train - protein * 4 - fat * 9) / 4)
     if carb_t / w < carb_guide[0] and not p.get("fat_pct"):
         # make room for carbs: drop fat toward 20 % of energy / 0.8 g/kg before anything else
@@ -179,10 +230,11 @@ def compute(p):
         micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
 
     return {
+        "training_days": n_train, "training_day_basis": day_basis,
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
         "session_kcal": [round(x) for x in sess_day], "tdee": {"training": round(tdee_train), "rest": round(tdee_rest), "avg": round(tdee_avg)},
         "goal_adjust_kcal": round(adj), "notes": notes, "protein_g_per_kg": round(protein / w, 2),
-        "carb_guide_g_per_kg": carb_guide, "water_l": round(0.035 * w + p.get("sweat_l_per_session", 1.0) * n_train / 7, 1),
+        "carb_guide_g_per_kg": carb_guide, "water_l": round(0.035 * w + p.get("sweat_l_per_session", 1.0) * sum(s["per_week"] for s in p["sessions"]) / 7, 1),
         "targets": {
             "training": {"kcal": kcal_train, "protein_g": protein, "carb_g": carb_t, "fat_g": fat},
             "rest": {"kcal": kcal_rest, "protein_g": protein, "carb_g": carb_r, "fat_g": fat},
@@ -196,6 +248,7 @@ def summary(p, r):
     w = p["weight_kg"]
     L = ["## Energy", f"BMR ≈ {r['bmr']['used']} kcal ({r['bmr']['method']}); base PAL {r['base_pal']}; "
          f"steps above 3,000 ≈ {r['steps_kcal']} kcal; sessions ≈ {', '.join(map(str, r['session_kcal'])) or '–'} kcal each.",
+         f"Training days: {r['training_days']} per week ({r['training_day_basis']}).",
          f"Maintenance ≈ {r['tdee']['training']} (training day) / {r['tdee']['rest']} (rest day) · goal adjustment {r['goal_adjust_kcal']:+} kcal/day.",
          "", "| Day | kcal | Protein g | Carbs g | Fat g | Carbs g/kg |", "|---|---|---|---|---|---|"]
     for d in ("training", "rest"):

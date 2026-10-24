@@ -78,7 +78,9 @@ Quick
 
 Standard
 - Session length and intensity per type (map to `MET` keys in targets.py)
-- Rest days: which weekdays
+- Which weekdays each session type happens on (→ `sessions[].days`), or at least how many distinct
+  days have any training (→ `training_days`). Sessions are not days: 3 runs + 3 lifts can be six
+  training days or three days with doubles, and that changes the training-day vs rest-day targets.
 - Daily steps (phone/watch average) and job: desk / on feet / physical
 - Sleep: usual bed and wake time (sets the night feeding and caffeine cut-off)
 

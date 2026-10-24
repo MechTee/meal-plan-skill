@@ -129,6 +129,9 @@ def validate(plan):
     fz = plan.get("meta", {}).get("freezer_portions")
     if fz is not None and (isinstance(fz, bool) or not isinstance(fz, (int, float)) or fz < 0):
         errs.append("meta.freezer_portions must be a number ≥ 0 (0 = no freezer) or left out (capacity not checked)")
+    sids = [x["id"] for x in plan.get("cycle", {}).get("sessions", []) if x.get("id")]
+    if len(sids) != len(set(sids)):
+        errs.append("cycle.sessions: session ids must be unique")
     sd = plan.get("cycle", {}).get("start_date")
     if sd and dt.date.fromisoformat(sd).weekday() != 0:
         errs.append("cycle.start_date must be a Monday (week 1, day 1)")

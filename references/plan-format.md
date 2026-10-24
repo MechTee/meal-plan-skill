@@ -171,6 +171,10 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   before the recipe's first batch of the new cycle is cooked; the check simulates until the freezer
   has converged and reports that peak) or
   `{"mode": "horizon", "cycles": 6}` (no policy; the freezer is verified for that many cycles only).
+- Sessions are identified by an optional `id` (unique) or their position — not by `label`. Two
+  sessions may share a label ("Sunday"); each distinct definition gets its own cook-day page
+  (`cook-sunday-wk1-3.html`, `cook-sunday-wk2-4.html`, titled with the weeks). Definitions that are
+  identical except for their weeks share one page.
 - `cook` maps batch recipe → number of batches. `steps`/`prep`/`notes` feed the cook-day page;
   without `steps` the page lists the recipes in order.
 

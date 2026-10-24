@@ -69,12 +69,50 @@ def recipe_data(plan, comp, rk):
             "alerts": M.allergy_alerts(plan)}
 
 
-def cookday_pages(plan):
-    seen = {}
-    for s in plan.get("cycle", {}).get("sessions", []):
-        lab = s.get("label", "Cook day")
-        if lab in seen:
+def _slug(text):
+    return re.sub(r"[^a-z0-9_-]+", "-", str(text).lower()).strip("-_") or "session"
+
+
+def session_groups(plan):
+    """Cook sessions as they appear in the plan, identified by `id` (or position), never by label.
+    Definitions that are identical apart from their weeks are grouped into one page; different
+    definitions always get their own page, even when they share a label."""
+    groups = []
+    every = list(range(1, M.cycle_weeks(plan) + 1))
+    for i, s in enumerate(plan.get("cycle", {}).get("sessions", [])):
+        sig = json.dumps({k: s.get(k) for k in ("label", "day", "prior", "cook", "steps", "prep", "notes")}, sort_keys=True)
+        weeks = set(s.get("weeks") or every)          # missing/empty weeks = every week of the cycle
+        g = next((g for g in groups if g["sig"] == sig), None)
+        if g:
+            g["_weeks"] |= weeks
+            g["ids"].append(s.get("id") or f"s{i + 1}")
             continue
+        groups.append({"sig": sig, "session": s, "ids": [s.get("id") or f"s{i + 1}"],
+                       "_weeks": weeks, "label": s.get("label", "Cook day")})
+    for g in groups:   # back to the display form: [] means every week
+        w = sorted(g.pop("_weeks"))
+        g["weeks"] = [] if w == every else w
+    # file names: from the label; when labels (or their slugs) repeat, add the weeks, then a counter
+    base = {}
+    for g in groups:
+        base.setdefault(_slug(g["label"]), []).append(g)
+    used = set()
+    for b, gs in base.items():
+        for g in gs:
+            name = "cook-" + b if len(gs) == 1 else f"cook-{b}-wk{'-'.join(map(str, g['weeks'])) or 'all'}"
+            n = 2
+            while name in used:
+                name, n = f"{name}-{n}", n + 1
+            used.add(name)
+            g["page_id"] = name
+            g["shared_label"] = len([x for x in groups if x["label"] == g["label"]]) > 1
+    return groups
+
+
+def cookday_pages(plan):
+    pages = []
+    for g in session_groups(plan):
+        s, lab = g["session"], g["label"]
         acc = M.Acc()
         agg = {}
         for rk, n in s["cook"].items():
@@ -87,18 +125,20 @@ def cookday_pages(plan):
         titles = [f"{plan['recipes'][rk]['title']}" + (f" ×{n}" if n != 1 else "") for rk, n in s["cook"].items()]
         steps = s.get("steps") or [[f"Cook the {t} — follow its own page.", None] for t in titles]
         ports = sum(float(plan["recipes"][rk]["portions"]) * n for rk, n in s["cook"].items() if plan["recipes"][rk].get("storage_units") is None)
-        wk = s.get("weeks")
-        seen[lab] = {"id": "cook-" + slug(lab), "title": f"{lab} — cook day", "kind": "Cook-day plan",
-                     "when": f"{s.get('day', 'Sun')}" + (f" · weeks {', '.join(map(str, wk))}" if wk else " · every week"),
-                     "serves": f"{M.fmt_num(ports)} portions + extras",
-                     "desc": "Everything cooked in this session: " + ", ".join(titles) + ".",
-                     "ing": {"*": items}, "prep": s.get("prep", []), "steps": steps, "notes": s.get("notes", []),
-                     "variants": {"Whole session": acc.export()}, "bw": plan.get("meta", {}).get("bw_kg", 80),
-                     "unit": "session", "refs": refs(plan), "refLabel": plan.get("meta", {}).get("ref_label"),
-                     "sources": plan.get("meta", {}).get("sources"),
-                     "smallNote": "Totals for the whole session — divide by the portions to compare with a meal.",
-                     "alerts": M.allergy_alerts(plan)}
-    return list(seen.values())
+        wk = g["weeks"]
+        weeks_txt = f"weeks {', '.join(map(str, wk))}" if wk else "every week"
+        title = f"{lab} ({weeks_txt}) — cook day" if g["shared_label"] else f"{lab} — cook day"
+        pages.append({"id": g["page_id"], "session_ids": g["ids"], "title": title, "kind": "Cook-day plan",
+                      "when": f"{s.get('day', 'Sun')} · {weeks_txt}",
+                      "serves": f"{M.fmt_num(ports)} portions + extras",
+                      "desc": "Everything cooked in this session: " + ", ".join(titles) + ".",
+                      "ing": {"*": items}, "prep": s.get("prep", []), "steps": steps, "notes": s.get("notes", []),
+                      "variants": {"Whole session": acc.export()}, "bw": plan.get("meta", {}).get("bw_kg", 80),
+                      "unit": "session", "refs": refs(plan), "refLabel": plan.get("meta", {}).get("ref_label"),
+                      "sources": plan.get("meta", {}).get("sources"),
+                      "smallNote": "Totals for the whole session — divide by the portions to compare with a meal.",
+                      "alerts": M.allergy_alerts(plan)})
+    return pages
 
 
 def recipe_line(plan, rk):

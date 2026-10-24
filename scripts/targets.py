@@ -34,7 +34,9 @@ BASE_PAL = {"desk": 1.25, "standing": 1.4, "manual": 1.6}  # incl. thermic effec
 
 # Reference values (floor): DGE/ÖGE reference values for nutrient intake, adults 25–<51 years, not pregnant or
 # breastfeeding. Each entry: male, female, UL, note, type, year of derivation ("Stand Ableitung") and source page.
-# UL = EFSA tolerable upper level (or safe level) for TOTAL intake unless noted.
+# UL = EFSA tolerable upper level (or safe level). A number applies to TOTAL intake; a list of
+# (form, limit) applies only to that form (see FORMS in mealplan.py) — e.g. the magnesium UL covers
+# supplemental/added magnesium, the vitamin A UL preformed retinol, the folate UL synthetic folic acid.
 # Checked against dge.de on 2026-10-24 (3rd edition, printed Sept 2025); re-check when the DGE publishes revisions.
 REFERENCE = {
     "name": "DGE/ÖGE reference values for nutrient intake, 3rd edition (2025)",
@@ -46,22 +48,23 @@ _DGE = "https://www.dge.de/wissenschaft/referenzwerte/"
 REF_DATA = {  # key: (male, female, UL, note, type, derived, page)
     "thiamin_mg": (1.2, 1.0, None, "scales with energy intake", "recommendation", 2015, "thiamin/"),
     "riboflavin_mg": (1.4, 1.1, None, "scales with energy intake", "recommendation", 2015, "riboflavin/"),
-    "niacin_mg": (15, 12, None, "UL applies to supplemental nicotinamide/nicotinic acid only", "recommendation", 2015, "niacin/"),
+    "niacin_mg": (15, 12, [("nicotinamide_mg", 900), ("nicotinic_acid_mg", 10)],
+                  "ULs apply to nicotinamide and nicotinic acid from supplements/fortification only", "recommendation", 2015, "niacin/"),
     "pantothenic_mg": (5, 5, None, "estimated value", "estimated value", 2021, "pantothensaeure/"),
     "b6_mg": (1.6, 1.4, 12, "EFSA UL 12 mg (2023)", "recommendation", 2019, "vitamin-b6/"),
     "biotin_ug": (40, 40, None, "estimated value", "estimated value", 2020, "biotin/"),
-    "folate_ug": (300, 300, None, "UL 1000 µg applies to synthetic folic acid only", "recommendation", 2015, "folat/"),
+    "folate_ug": (300, 300, [("folic_acid_ug", 1000)], "UL 1000 µg applies to synthetic folic acid only", "recommendation", 2015, "folat/"),
     "b12_ug": (4.0, 4.0, None, "vegan: must supplement; absorption saturates — dose per pack", "estimated value", 2018, "vitamin-b12/"),
     "potassium_mg": (4000, 4000, None, "estimated value", "estimated value", 2016, "kalium/"),
     "phosphorus_mg": (550, 550, None, "DGE lowered from 700 mg", "estimated value", 2024, "phosphor/"),
-    "magnesium_mg": (350, 300, None, "EFSA UL 250 mg applies to supplements only", "estimated value", 2021, "magnesium/"),
+    "magnesium_mg": (350, 300, [("magnesium_added_mg", 250)], "UL 250 mg applies to supplemental/added magnesium only", "estimated value", 2021, "magnesium/"),
     "calcium_mg": (1000, 1000, 2500, "", "recommendation", 2013, "calcium/"),
     "zinc_mg": (14, 8, 25, "phytate-dependent (low/medium/high: ♂ 11/14/16, ♀ 7/8/10)", "recommendation", 2019, "zink/"),
     "iron_mg": (11, 16, 40, "women: 16 mg while menstruating, 11 mg premenopausal without menstruation, 14 mg after menopause; EFSA safe level 40 mg (2024)",
                 "recommendation", 2023, "eisen/"),
     "selenium_ug": (70, 60, 255, "EFSA UL 255 µg (2023)", "estimated value", 2015, "selen/"),
     "iodine_ug": (150, 150, 600, "DGE lowered from 200 µg in 2025; plant drinks are rarely iodised", "recommendation", 2025, "jod/"),
-    "vitA_rae_ug": (850, 700, 3000, "UL is for preformed retinol", "recommendation", 2020, "vitamin-a/"),
+    "vitA_rae_ug": (850, 700, [("retinol_ug", 3000)], "UL 3000 µg applies to preformed vitamin A (retinol) only", "recommendation", 2020, "vitamin-a/"),
     "vitC_mg": (110, 95, None, "smokers 155/135 mg; no UL; GI upset above ~1 g supplemental", "recommendation", 2015, "vitamin-c/"),
     "vitD_ug": (20, 20, 100, "assumes no sun synthesis", "estimated value", 2012, "vitamin-d/"),
     "vitE_mg": (8, 8, 300, "DGE revised to 8 mg (RRR-α-tocopherol) for all adults", "estimated value", 2024, "vitamin-e/"),
@@ -265,7 +268,11 @@ def compute(p):
         if k == "vitC_mg":
             aim = max(floor, 150)
             why = "150 mg covers heavy training; no benefit shown for megadoses"
-        micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why, "source": ref_source(k)}
+        if isinstance(ul, list):
+            micros[k] = {"floor": floor, "aim": aim, "ul": None,
+                         "limits": [{"basis": b, "ul": v} for b, v in ul], "note": why, "source": ref_source(k)}
+        else:
+            micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why, "source": ref_source(k)}
 
     # energy availability: intake minus planned exercise, per kg fat-free mass
     ffm = b.get("ffm_kg")
@@ -325,8 +332,9 @@ def summary(p, r):
     for k, v in t["micros"].items():
         src = v.get("source") or {}
         cite = f"[DGE {src['derived']}]({src['url']})" if src.get("url") else "–"
+        ul = v["ul"] or "; ".join(f"{x['ul']} ({x['basis']})" for x in v.get("limits", [])) or "–"
         L.append(f"| {k} | {v['floor'] if v['floor'] is not None else '–'} | {v['aim'] if v['aim'] is not None else '–'} | "
-                 f"{v['ul'] or '–'} | {v['note']} | {cite} |")
+                 f"{ul} | {v['note']} | {cite} |")
     return "\n".join(L)
 
 

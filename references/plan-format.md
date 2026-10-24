@@ -51,6 +51,13 @@ and lists every unknown key reference.
 prints it). `supplement` is a
 daily average and is added to food in checks and in the workbook ("Supplements / day" row).
 
+Upper limits: `ul` applies to the **total** intake. `limits: [{"basis": "<form key>", "ul": n}]`
+applies to one form only (magnesium → `magnesium_added_mg` 250; folate → `folic_acid_ug` 1000;
+vitamin A → `retinol_ug` 3000; niacin → `nicotinamide_mg` 900 and `nicotinic_acid_mg` 10). Say what form a
+supplement is in with `supplement_forms`, e.g. `{"supplement": 400, "supplement_forms": {"folic_acid_ug": 400}}`.
+A magnesium supplement always counts as added magnesium; for the others an unknown supplement form
+leaves the limit **unresolved** (reported, never "ok").
+
 ## ingredients
 
 (`//` comments below are explanations only — JSON files cannot contain them.)
@@ -68,6 +75,8 @@ daily average and is added to food in checks and in the workbook ("Supplements /
   "digestibility": 0.9,
   "allergens": ["soy"],                  // what the product contains (see list below); [] = none
   "may_contain": [],                     // trace warnings from the label
+  "origin": "plant",                     // plant | fungal | animal | other (water, salt, pure compounds) — only animal foods contain preformed retinol
+  "fortified_with": [],                  // parent nutrients added by the maker, e.g. ["calcium_mg", "vitD_ug", "folate_ug"]
   "piece_g": null,                       // grams per piece when bought by the piece
   "shop": {"buy": "stock", "pack_size": 1000, "pack_unit": "g", "pack_label": "Vantastic Soja Schnetzel 1 kg",
            "price": 8.99, "store": "online", "link": "https://…", "shelf_days": null, "carry": true,
@@ -79,6 +88,14 @@ Nutrient keys (`per100`): `kcal protein_g fat_g satfat_g carb_g sugar_g fiber_g 
 `thiamin_mg riboflavin_mg niacin_mg pantothenic_mg b6_mg biotin_ug folate_ug b12_ug potassium_mg
 phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA_rae_ug vitC_mg
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
+Nutrient **forms** with their own upper limits (optional per100 keys): `retinol_ug` (preformed
+vitamin A, part of `vitA_rae_ug`), `folic_acid_ug` (synthetic, part of `folate_ug`),
+`magnesium_added_mg` (added/supplemental magnesium), `nicotinamide_mg`, `nicotinic_acid_mg` (part of
+`niacin_mg`). When a form is not given it is 0 where that is certain — the parent nutrient is 0;
+retinol in a `plant`, `fungal` or `other` ingredient; folic acid, added magnesium and the niacin forms in a food not
+`fortified_with` that nutrient — and unknown otherwise; a form limit with any unknown amount stays
+"UL unresolved".
+
 Leave a key **out** (or `null`) when unknown — it is tracked as missing data; write `0` only when the
 true value is zero. A total with missing values is a **lower bound**: the check, report, workbook
 ("Food without a value" and "Status" rows) and pages show it with "≥". A lower bound can show that a

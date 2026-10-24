@@ -137,6 +137,27 @@ def compute(p):
                      "energy may be underestimated (check session intensity/METs) or protein is set high — discuss")
     carb_r = round((kcal_rest - protein * 4 - fat * 9) / 4)
 
+    # feasibility: protein and the fat floor are fixed first, carbohydrate takes what is left. If nothing
+    # (or less than nothing) is left, there is no plan that meets these constraints — say so instead of
+    # returning a negative target.
+    problems = []
+    for day, kcal, carb in (("training day", kcal_train, carb_t), ("rest day", kcal_rest, carb_r)):
+        fixed = protein * 4 + fat * 9
+        if carb < 0:
+            problems.append(f"{day}: {kcal} kcal cannot hold {protein} g protein ({protein * 4} kcal) and the minimum "
+                            f"{fat} g fat ({fat * 9} kcal) — {fixed - kcal} kcal short, carbohydrate would be {carb} g")
+    if kcal_rest < b["used"]:
+        notes.append(f"rest-day energy {kcal_rest} kcal is below the estimated BMR ({b['used']} kcal): the deficit is "
+                     "very aggressive — consider a slower rate")
+    if problems:
+        return {"supported": True, "feasible": False, "problems": problems,
+                "inputs": {"kcal_training": kcal_train, "kcal_rest": kcal_rest, "protein_g": protein, "fat_min_g": fat,
+                           "bmr": b["used"], "goal_adjust_kcal": round(adj)},
+                "advice": "Revise the constraints: a slower rate of loss (or maintenance), a lower protein target within "
+                          "the evidence range, or re-check body weight, activity and the energy estimate. A deficit this "
+                          "large is not appropriate without individual professional guidance.",
+                "notes": notes}
+
     sex = p["sex"]
     micros = {}
     avg_kcal = (kcal_train * n_train + kcal_rest * (7 - n_train)) / 7
@@ -179,6 +200,7 @@ def compute(p):
         micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
 
     return {
+        "feasible": True,
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
         "session_kcal": [round(x) for x in sess_day], "tdee": {"training": round(tdee_train), "rest": round(tdee_rest), "avg": round(tdee_avg)},
         "goal_adjust_kcal": round(adj), "notes": notes, "protein_g_per_kg": round(protein / w, 2),
@@ -192,6 +214,9 @@ def compute(p):
 
 
 def summary(p, r):
+    if r.get("feasible") is False:
+        return ("## Infeasible targets\n\n" + "\n".join(f"- {x}" for x in r["problems"]) + f"\n\n{r['advice']}"
+                + "".join(f"\n\nNote: {n}" for n in r.get("notes", [])))
     t = r["targets"]
     w = p["weight_kg"]
     L = ["## Energy", f"BMR ≈ {r['bmr']['used']} kcal ({r['bmr']['method']}); base PAL {r['base_pal']}; "
@@ -215,5 +240,9 @@ if __name__ == "__main__":
     prof = json.load(open(sys.argv[1]))
     res = compute(prof)
     print(summary(prof, res))
+    if res.get("feasible") is False:
+        if len(sys.argv) > 2:
+            json.dump(res, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
+        sys.exit(3)
     if len(sys.argv) > 2:
         json.dump(res, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)

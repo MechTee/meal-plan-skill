@@ -101,6 +101,11 @@ energy-scaled B vitamins, +20 % magnesium, phytate-tier zinc, ×1.8 iron for pla
 sweat sodium, etc.) and **UL** (EFSA). The rationale for every adjustment, plus protein/carb ranges
 by sport and the evidence behind the pre-workout protocol, is in `references/nutrition.md`.
 
+If `targets.py` reports **infeasible targets** (exit code 3: protein and the minimum fat already use
+more energy than the day allows), do not adjust numbers by hand to make it work — show the athlete
+why, and revise the constraints with them (slower rate, maintenance, a protein target lower in the
+evidence range) or recommend individual professional guidance.
+
 Show the athlete one compact table (training day / rest day: kcal, P, C, F, g/kg) and the micro
 targets that matter for *their* plan (the ones their diet makes risky — e.g. B12, iodine, iron,
 zinc, calcium, vitamin D for plant-based eaters; sodium for heavy sweaters). Their own numbers win

@@ -61,5 +61,53 @@ class Drift(unittest.TestCase):
         self.assertIn("freezer: peak", flags)          # 6 cycles of growth exceed 45 containers
 
 
+def one_week(portions, keep, day="Sun", prior=True):
+    """A one-week plan: one batch recipe cooked once, one portion eaten every day."""
+    p = copy.deepcopy(BASE)
+    p["recipes"]["dal"]["portions"] = portions
+    for d in M.WEEKDAYS:
+        p["days"][d]["meals"] = [{"name": "Lunch", "parts": [{"recipe": "dal", "portions": 1}]}]
+    p["week_overrides"] = {}
+    p["cycle"] = {"weeks": 1, "start_date": "2026-11-02",
+                  "sessions": [{"label": "Cook", "day": day, "prior": prior, "cook": {"dal": 1}}],
+                  "surplus_policy": {"mode": "discard", "keep": keep}}
+    return p
+
+
+class DiscardReview(unittest.TestCase):
+    """Review on PR #34."""
+    def test_prior_cook_is_not_discarded(self):
+        """Next cycle's Sunday cook happens before the old cycle's Sunday meal — the fresh batch survives."""
+        inv = M.inventory(one_week(8, 1))
+        self.assertTrue(inv["steady"])
+        self.assertEqual(inv["steady_shortfalls"], [])
+        self.assertEqual(inv["discarded_per_cycle"], {"dal": 1.0})
+        self.assertEqual(inv["peak_total_portions"], 9)
+
+    def test_midweek_cook_keeps_portions_for_the_days_before_it(self):
+        """Portions eaten before the cycle's first cook (Mon/Tue before a Wednesday cook) are never discarded."""
+        inv = M.inventory(one_week(7, 0, day="Wed", prior=False))
+        self.assertTrue(inv["steady"])
+        self.assertEqual(inv["steady_shortfalls"], [])
+        self.assertEqual(inv["discarded_per_cycle"], {})
+
+    def test_high_keep_is_simulated_to_convergence(self):
+        p = example(surplus_policy={"mode": "discard", "keep": 100})
+        p["meta"]["freezer_portions"] = 40
+        res = M.compute(p)
+        inv = res["inventory"]
+        self.assertGreater(inv["cycles_simulated"], 6)
+        self.assertGreater(inv["peak_total_portions"], M.inventory(example(), cycles=6)["peak_total_portions"])
+        self.assertTrue(any(f.startswith("freezer: peak") for f in res["checks"]["flags"]))
+
+    def test_keep_never_reached_is_not_steady(self):
+        p = example(surplus_policy={"mode": "discard", "keep": 10000})
+        res = M.compute(p)
+        inv = res["inventory"]
+        self.assertFalse(inv["steady"])
+        self.assertEqual(inv["cycles_simulated"], M.DISCARD_MAX_CYCLES)
+        self.assertTrue(any("under the discard policy" in f for f in res["checks"]["flags"]))
+
+
 if __name__ == "__main__":
     unittest.main()

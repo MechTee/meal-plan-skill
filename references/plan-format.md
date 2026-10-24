@@ -134,7 +134,9 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 - `surplus_policy` (optional): when a recipe is cooked more often than it is eaten, its spare portions
   pile up every cycle and the freezer never reaches a steady state — the check flags this. Either
   rebalance, or declare what happens to spares: `{"mode": "discard", "keep": 2}` (portions above
-  `keep` per recipe — or `{"chili": 3}` — are given away or thrown out at each cycle end; modelled) or
+  `keep` per recipe — or `{"chili": 3}` — are given away or thrown out at each cycle end, i.e. just
+  before the recipe's first batch of the new cycle is cooked; the check simulates until the freezer
+  has converged and reports that peak) or
   `{"mode": "horizon", "cycles": 6}` (no policy; the freezer is verified for that many cycles only).
 - `cook` maps batch recipe → number of batches. `steps`/`prep`/`notes` feed the cook-day page;
   without `steps` the page lists the recipes in order.

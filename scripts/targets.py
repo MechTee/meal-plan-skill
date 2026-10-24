@@ -77,7 +77,44 @@ def bmr(p):
     return out
 
 
+REFERENCE_POPULATION = "adults 25–<51 years, not pregnant or breastfeeding (D-A-CH reference values)"
+
+
+def population(p):
+    """Route the profile: which population the built-in reference table covers.
+
+    Returns (status, reason): "exact" (adults 25–<51), "approximate" (other adult ages — the table is
+    used but some D-A-CH values differ by age band; outputs say so), or "unsupported" (minors,
+    pregnancy, breastfeeding — different requirements; this calculator must not produce targets)."""
+    age = p.get("age")
+    if not isinstance(age, (int, float)) or age <= 0:
+        raise ValueError("age is required (years) — reference values depend on it")
+    if p.get("sex") not in ("male", "female"):
+        raise ValueError('sex must be "male" or "female": it selects the energy equation and the reference table '
+                         "(pick the set that best matches the athlete's physiology, e.g. hormonal status, and say so)")
+    if age < 18:
+        return "unsupported", ("under 18: adolescents have growth-specific energy and nutrient needs (e.g. D-A-CH calcium "
+                               "1,200 mg for 15–<19 years) that this adult calculator does not model")
+    if p.get("pregnant"):
+        return "unsupported", ("pregnancy: energy, protein and several nutrient needs change by trimester (e.g. folate "
+                               "550 µg folate equivalents) and need individual medical/dietetic guidance")
+    if p.get("breastfeeding"):
+        return "unsupported", ("breastfeeding: energy and several nutrient needs are higher (e.g. folate 450 µg folate "
+                               "equivalents) and need individual dietetic guidance")
+    if 25 <= age < 51:
+        return "exact", REFERENCE_POPULATION
+    band = "19–<25" if age < 25 else ("51–<65" if age < 65 else "65+")
+    return "approximate", (f"age {age:g} is in the D-A-CH {band} band; the built-in table is for 25–<51, and some values "
+                           "differ by age (e.g. energy, vitamin B1/B2/niacin, and for 65+ protein ≥ 1.0 g/kg and fluid) — "
+                           "check the targets against that age band before using them")
+
+
 def compute(p):
+    status, reason = population(p)
+    if status == "unsupported":
+        return {"supported": False, "population": status, "reason": reason,
+                "advice": "Do not use adult targets. Offer food-first structure without calorie or nutrient numbers "
+                          "and recommend a sports dietitian (and the athlete's doctor) for targets."}
     p = dict(p)
     p.setdefault("sex", "male"); p.setdefault("occupation", "desk"); p.setdefault("steps_per_day", 7000)
     p.setdefault("sessions", []); p.setdefault("goal", "maintain"); p.setdefault("diet", "omnivore")
@@ -178,7 +215,10 @@ def compute(p):
             why = "150 mg covers heavy training; no benefit shown for megadoses"
         micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
 
+    if status == "approximate":
+        notes.append("reference values: " + reason)
     return {
+        "supported": True, "population": status, "reference_population": REFERENCE_POPULATION,
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
         "session_kcal": [round(x) for x in sess_day], "tdee": {"training": round(tdee_train), "rest": round(tdee_rest), "avg": round(tdee_avg)},
         "goal_adjust_kcal": round(adj), "notes": notes, "protein_g_per_kg": round(protein / w, 2),
@@ -192,6 +232,8 @@ def compute(p):
 
 
 def summary(p, r):
+    if not r.get("supported", True):
+        return f"## Not supported\n\n{r['reason']}.\n\n{r['advice']}"
     t = r["targets"]
     w = p["weight_kg"]
     L = ["## Energy", f"BMR ≈ {r['bmr']['used']} kcal ({r['bmr']['method']}); base PAL {r['base_pal']}; "
@@ -213,7 +255,13 @@ def summary(p, r):
 
 if __name__ == "__main__":
     prof = json.load(open(sys.argv[1]))
-    res = compute(prof)
+    try:
+        res = compute(prof)
+    except ValueError as e:
+        print(f"PROFILE ERROR: {e}")
+        sys.exit(1)
     print(summary(prof, res))
+    if not res.get("supported", True):
+        sys.exit(2)
     if len(sys.argv) > 2:
         json.dump(res, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)

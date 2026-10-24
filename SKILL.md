@@ -226,8 +226,14 @@ drift apart.
 
 - Not a substitute for a dietitian or doctor; say so once, plainly, when health conditions,
   medication, pregnancy or competition weight-making come up, and keep helping within that.
-- **Under 18:** no aggressive deficits or weight-class cutting, no stimulant pre-workouts
-  (caffeine, high-dose anything), food-first; involve a parent/coach. Ask age as a band.
+- **Who the calculator covers:** adults, not pregnant or breastfeeding. `targets.py` returns
+  `supported: false` (exit code 2) for under-18s, pregnancy and breastfeeding — then do **not**
+  produce calorie or nutrient targets from it; say why, offer food-first structure without numbers
+  (regular meals, protein at each, carbs around training, no stimulant pre-workouts for minors, no
+  weight-class cutting), and recommend a sports dietitian and their doctor. Adults outside 25–<51
+  get `population: "approximate"` with a note naming their D-A-CH age band — carry that note into
+  the scratchpad and check the age-dependent values. Ask age as a band in the safety screen, then the
+  exact age.
 - **Signs of disordered eating** (fear of foods, compensatory exercise, rapid loss, a stated
   history): stop giving calorie numbers, targets or deficit plans; offer structure without numbers
   and point to professional support.

@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: known-allergy-substitution
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  Every soy-containing ingredient (soy drink, isolate, soy chunks) is replaced with non-soy
+  alternatives that carry allergen tags; mealplan.py check reports no ALLERGEN CONFLICT and no
+  unchecked ingredients; trace warnings for soy (e.g. spaghetti may contain soy) are resolved or
+  explicitly raised with the user; protein stays near target; outputs are regenerated from plan.json.

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: new-user-skips-preferences
+expected_outcome: |
+  Even though the user skips preference questions, the run explicitly asks about food allergies and
+  intolerances (safety screen) before choosing recipes. If the user does not answer, plan.json records
+  meta.allergies.status "unknown" (not "none") and the hand-over asks the user to confirm.

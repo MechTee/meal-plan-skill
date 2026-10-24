@@ -157,6 +157,8 @@ function packsFor(it){
   if (!seq.length) return it.packs;
   return seq[Math.min(state.cycle-1, seq.length-1)];
 }
+// Runs the user opened or closed by hand, per cycle — kept across re-renders (cycle/filter changes).
+const openState = {};
 function render(){
   renderCycles(); renderFilters();
   const runs = S.runs.map(r => ({...r, d: shift(r.date, state.cycle)}));
@@ -184,19 +186,39 @@ function render(){
       return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-label="Got it"><span class="txt">${esc(it.name)}<span class="note">${bits.join(" · ")}</span></span><span class="qty">${qty}<small>${sub}</small></span></label></li>`;
     }).join("") + `</ul>`).join("");
     const isNext = idx === nextIdx, isDone = items.length && done === items.length;
-    const open = isNext || state.filter !== "upcoming" && state.filter !== "all" ? "open" : "";
-    return `<details class="run${isNext?" next":""}${isDone?" done":""}" ${open}>
+    const manual = openState[`${state.cycle}:${r.id}`];
+    const open = (manual !== undefined ? manual : (isNext || state.filter !== "upcoming" && state.filter !== "all")) ? "open" : "";
+    return `<details class="run${isNext?" next":""}${isDone?" done":""}" data-run="${esc(r.id)}" ${open}>
       <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(r.cost)}</span></span>
       <span class="prog">${done}/${items.length}</span><span class="meter"><i style="width:${items.length?done/items.length*100:0}%"></i></span></summary>
       <div class="body">${body}<div class="foot"><span>${esc(r.note || "")}</span><button type="button" data-clear="${esc(r.id)}">Clear ticks</button></div></div></details>`;
   }).join("");
   $("runs").innerHTML = html || `<p class="desc">No runs to show in this view.</p>`;
+  // Ticking updates this run in place — no re-render — so open runs stay open and focus stays on the checkbox.
   $("runs").querySelectorAll("input[type=checkbox]").forEach(cb => cb.onchange = () => {
     const k = `${state.cycle}:${cb.dataset.run}`;
     state.ticks[k] = state.ticks[k] || {};
-    state.ticks[k][cb.dataset.k] = cb.checked; store.set(state); render();
+    state.ticks[k][cb.dataset.k] = cb.checked; store.set(state);
+    cb.closest("label").classList.toggle("done", cb.checked);
+    updateProgress(cb.closest("details"));
   });
-  $("runs").querySelectorAll("[data-clear]").forEach(b => b.onclick = e => { e.preventDefault(); delete state.ticks[`${state.cycle}:${b.dataset.clear}`]; store.set(state); render(); });
+  $("runs").querySelectorAll("details.run").forEach(d => d.addEventListener("toggle", () => {
+    openState[`${state.cycle}:${d.dataset.run}`] = d.open;
+  }));
+  $("runs").querySelectorAll("[data-clear]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    delete state.ticks[`${state.cycle}:${b.dataset.clear}`]; store.set(state);
+    const d = b.closest("details");
+    d.querySelectorAll("input[type=checkbox]").forEach(cb => { cb.checked = false; cb.closest("label").classList.remove("done"); });
+    updateProgress(d);
+  });
+}
+function updateProgress(d){
+  const boxes = [...d.querySelectorAll("input[type=checkbox]:not(:disabled)")];
+  const done = boxes.filter(b => b.checked).length;
+  d.querySelector(".prog").textContent = `${done}/${boxes.length}`;
+  d.querySelector(".meter i").style.width = `${boxes.length ? done / boxes.length * 100 : 0}%`;
+  d.classList.toggle("done", boxes.length > 0 && done === boxes.length);
 }
 $("refSec").hidden = !(S.recipes && S.recipes.length);
 $("ref").innerHTML = (S.recipes || []).map(r => `<div><dt>${esc(r.title)}</dt><dd>${esc(r.line)}</dd></div>`).join("");

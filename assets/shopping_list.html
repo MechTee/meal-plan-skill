@@ -106,12 +106,16 @@ const store = {
   set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
 };
 const $ = id => document.getElementById(id);
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Every plan string is data: escape it for text AND attribute contexts (quotes included).
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+// Only http(s) links from the plan become hrefs (no javascript:, data:, etc.).
+const safeUrl = u => { try { const x = new URL(String(u)); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : ""; } catch(e) { return ""; } };
 const cur = S.currency || "EUR";
 const money = v => v == null ? "" : new Intl.NumberFormat(S.locale || "de-DE", {style:"currency", currency:cur}).format(v);
 const DAY = 864e5;
 const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
-const W = S.cycleWeeks || 4;
+const W = num(S.cycleWeeks) || 4;
 const today = new Date(); today.setHours(0,0,0,0);
 
 function cycleOf(date){ const c = Math.floor((date - parse(S.runs[0].date)) / (7*W*DAY)) + 1; return Math.max(1, c); }
@@ -159,16 +163,16 @@ function render(){
     r.items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
     const body = Object.entries(groups).map(([g, list]) => `<div class="grp">${esc(g)}</div><ul>` + list.map(it => {
       const p = packsFor(it), skip = p === 0, on = !!tk[it.key];
-      const qty = skip ? "skip" : (p == null ? `${Math.round(it.need)} ${it.unit}` : `${p} ×`);
+      const qty = skip ? "skip" : (p == null ? `${Math.round(num(it.need))} ${esc(it.unit)}` : `${num(p)} ×`);
       const sub = skip ? `have enough` : (it.pack_label ? esc(it.pack_label) : "");
       const bits = [];
       if (it.cost && !skip) bits.push(money(it.cost));
       if (it.store) bits.push(esc(it.store));
-      bits.push(`uses ${Math.round(it.need).toLocaleString()} ${it.unit}`);
+      bits.push(`uses ${Math.round(num(it.need)).toLocaleString()} ${esc(it.unit)}`);
       if (it.alternating) bits.push(esc(it.alternating));
-      if (it.lasts_cycles && it.lasts_cycles >= 1.5) bits.push(`one pack lasts ~${it.lasts_cycles} cycles`);
+      if (num(it.lasts_cycles) >= 1.5) bits.push(`one pack lasts ~${num(it.lasts_cycles)} cycles`);
       if (it.note) bits.push(esc(it.note));
-      if (it.link) bits.push(`<a href="${esc(it.link)}" target="_blank" rel="noopener">link</a>`);
+      if (safeUrl(it.link)) bits.push(`<a href="${esc(safeUrl(it.link))}" target="_blank" rel="noopener">link</a>`);
       return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-label="Got it"><span class="txt">${esc(it.name)}<span class="note">${bits.join(" · ")}</span></span><span class="qty">${qty}<small>${sub}</small></span></label></li>`;
     }).join("") + `</ul>`).join("");
     const isNext = idx === nextIdx, isDone = items.length && done === items.length;

@@ -7,7 +7,7 @@ session, and the dated shopping list.
 Each page is a self-contained HTML file ready to publish with the Artifact tool (one artifact per
 page, so each can be opened on a phone in the kitchen or at the shop).
 """
-import sys, os, json, argparse
+import sys, os, json, argparse, html as _html
 sys.path.insert(0, os.path.dirname(__file__))
 import mealplan as M
 
@@ -41,8 +41,10 @@ def refs(plan):
 
 def fill(template, title, data, accent):
     html = open(os.path.join(ASSETS, template), encoding="utf-8").read()
-    js = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    return (html.replace("__TITLE__", title.replace("<", "&lt;")).replace("__DATA__", js)
+    # JSON inside <script>: escape <, > and & so no plan string can close the script element or open a comment
+    js = (json.dumps(data, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+          .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+    return (html.replace("__TITLE__", _html.escape(title, quote=True)).replace("__DATA__", js)
             .replace("__ACCENT_L__", accent[0]).replace("__ACCENT_D__", accent[1]))
 
 
@@ -146,7 +148,7 @@ def shopping_markdown(plan, comp):
             bits = []
             if it.get("price_each") is not None and p:
                 bits.append(f"~{it['price_each']:.2f} each")
-            if it.get("link"):
+            if str(it.get("link") or "").startswith(("https://", "http://")):
                 bits.append(f"[link]({it['link']})")
             extra = []
             extra.append(f"uses {round(it['need'])} {it['unit']}")

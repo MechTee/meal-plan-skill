@@ -99,6 +99,9 @@ def validate(plan):
     missing = [d for d in WEEKDAYS if d not in plan.get("days", {})]
     if missing:
         errs.append(f"days missing from template week: {missing}")
+    sids = [x["id"] for x in plan.get("cycle", {}).get("sessions", []) if x.get("id")]
+    if len(sids) != len(set(sids)):
+        errs.append("cycle.sessions: session ids must be unique")
     sd = plan.get("cycle", {}).get("start_date")
     if sd and dt.date.fromisoformat(sd).weekday() != 0:
         errs.append("cycle.start_date must be a Monday (week 1, day 1)")

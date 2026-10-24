@@ -131,6 +131,10 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 ```
 - `start_date` is the Monday of week 1. `prior: true` puts the event in the previous calendar week
   (the Sunday *before* the week it feeds). Sessions happen before that day's meals.
+- Sessions are identified by an optional `id` (unique) or their position — not by `label`. Two
+  sessions may share a label ("Sunday"); each distinct definition gets its own cook-day page
+  (`cook-sunday-wk1-3.html`, `cook-sunday-wk2-4.html`, titled with the weeks). Definitions that are
+  identical except for their weeks share one page.
 - `cook` maps batch recipe → number of batches. `steps`/`prep`/`notes` feed the cook-day page;
   without `steps` the page lists the recipes in order.
 

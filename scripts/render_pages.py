@@ -7,7 +7,7 @@ session, and the dated shopping list.
 Each page is a self-contained HTML file ready to publish with the Artifact tool (one artifact per
 page, so each can be opened on a phone in the kitchen or at the shop).
 """
-import sys, os, json, argparse
+import sys, os, re, json, argparse
 sys.path.insert(0, os.path.dirname(__file__))
 import mealplan as M
 
@@ -65,12 +65,45 @@ def recipe_data(plan, comp, rk):
             "sources": meta.get("sources"), "noProtein": r.get("no_protein_note"), "smallNote": r.get("small_protein_note")}
 
 
-def cookday_pages(plan):
-    seen = {}
-    for s in plan.get("cycle", {}).get("sessions", []):
-        lab = s.get("label", "Cook day")
-        if lab in seen:
+def _slug(text):
+    return re.sub(r"[^a-z0-9_-]+", "-", str(text).lower()).strip("-_") or "session"
+
+
+def session_groups(plan):
+    """Cook sessions as they appear in the plan, identified by `id` (or position), never by label.
+    Definitions that are identical apart from their weeks are grouped into one page; different
+    definitions always get their own page, even when they share a label."""
+    groups = []
+    for i, s in enumerate(plan.get("cycle", {}).get("sessions", [])):
+        sig = json.dumps({k: s.get(k) for k in ("label", "day", "prior", "cook", "steps", "prep", "notes")}, sort_keys=True)
+        g = next((g for g in groups if g["sig"] == sig), None)
+        if g:
+            g["weeks"] = sorted(set(g["weeks"]) | set(s.get("weeks") or []))
+            g["ids"].append(s.get("id") or f"s{i + 1}")
             continue
+        groups.append({"sig": sig, "session": s, "ids": [s.get("id") or f"s{i + 1}"],
+                       "weeks": list(s.get("weeks") or []), "label": s.get("label", "Cook day")})
+    # file names: from the label; when labels (or their slugs) repeat, add the weeks, then a counter
+    base = {}
+    for g in groups:
+        base.setdefault(_slug(g["label"]), []).append(g)
+    used = set()
+    for b, gs in base.items():
+        for g in gs:
+            name = "cook-" + b if len(gs) == 1 else f"cook-{b}-wk{'-'.join(map(str, g['weeks'])) or 'all'}"
+            n = 2
+            while name in used:
+                name, n = f"{name}-{n}", n + 1
+            used.add(name)
+            g["page_id"] = name
+            g["shared_label"] = len([x for x in groups if x["label"] == g["label"]]) > 1
+    return groups
+
+
+def cookday_pages(plan):
+    pages = []
+    for g in session_groups(plan):
+        s, lab = g["session"], g["label"]
         acc = M.Acc()
         agg = {}
         for rk, n in s["cook"].items():
@@ -83,17 +116,19 @@ def cookday_pages(plan):
         titles = [f"{plan['recipes'][rk]['title']}" + (f" ×{n}" if n != 1 else "") for rk, n in s["cook"].items()]
         steps = s.get("steps") or [[f"Cook the {t} — follow its own page.", None] for t in titles]
         ports = sum(float(plan["recipes"][rk]["portions"]) * n for rk, n in s["cook"].items() if plan["recipes"][rk].get("storage_units") is None)
-        wk = s.get("weeks")
-        seen[lab] = {"id": "cook-" + lab.lower().replace(" ", "-"), "title": f"{lab} — cook day", "kind": "Cook-day plan",
-                     "when": f"{s.get('day', 'Sun')}" + (f" · weeks {', '.join(map(str, wk))}" if wk else " · every week"),
-                     "serves": f"{M.fmt_num(ports)} portions + extras",
-                     "desc": "Everything cooked in this session: " + ", ".join(titles) + ".",
-                     "ing": {"*": items}, "prep": s.get("prep", []), "steps": steps, "notes": s.get("notes", []),
-                     "variants": {"Whole session": acc.export()}, "bw": plan.get("meta", {}).get("bw_kg", 80),
-                     "unit": "session", "refs": refs(plan), "refLabel": plan.get("meta", {}).get("ref_label"),
-                     "sources": plan.get("meta", {}).get("sources"),
-                     "smallNote": "Totals for the whole session — divide by the portions to compare with a meal."}
-    return list(seen.values())
+        wk = g["weeks"]
+        weeks_txt = f"weeks {', '.join(map(str, wk))}" if wk else "every week"
+        title = f"{lab} ({weeks_txt}) — cook day" if g["shared_label"] else f"{lab} — cook day"
+        pages.append({"id": g["page_id"], "session_ids": g["ids"], "title": title, "kind": "Cook-day plan",
+                      "when": f"{s.get('day', 'Sun')} · {weeks_txt}",
+                      "serves": f"{M.fmt_num(ports)} portions + extras",
+                      "desc": "Everything cooked in this session: " + ", ".join(titles) + ".",
+                      "ing": {"*": items}, "prep": s.get("prep", []), "steps": steps, "notes": s.get("notes", []),
+                      "variants": {"Whole session": acc.export()}, "bw": plan.get("meta", {}).get("bw_kg", 80),
+                      "unit": "session", "refs": refs(plan), "refLabel": plan.get("meta", {}).get("ref_label"),
+                      "sources": plan.get("meta", {}).get("sources"),
+                      "smallNote": "Totals for the whole session — divide by the portions to compare with a meal."})
+    return pages
 
 
 def recipe_line(plan, rk):
@@ -191,6 +226,11 @@ def main():
         open(path, "w", encoding="utf-8").write(fill("recipe_page.html", r["title"], recipe_data(plan, comp, rk), acc))
         written.append(path)
     if not a.no_cookdays and not only:
+        taken = {f"{rk}" for rk in plan["recipes"]} | {"shopping-list"}
+        clash = [d["id"] for d in cookday_pages(plan) if d["id"] in taken]
+        if clash:
+            print(f"OUTPUT ERROR: cook-day page name(s) {clash} clash with a recipe or the shopping list — rename the session label")
+            sys.exit(1)
         for j, d in enumerate(cookday_pages(plan)):
             path = os.path.join(a.out_dir, f"{d['id']}.html")
             open(path, "w", encoding="utf-8").write(fill("recipe_page.html", d["title"], d, ACCENTS[(j + 3) % len(ACCENTS)]))

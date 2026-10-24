@@ -175,7 +175,9 @@ function render(){
     const done = items.filter(it => tk[it.key]).length;
     const groups = {};
     r.items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
+    let uid = 0;
     const body = Object.entries(groups).map(([g, list]) => `<div class="grp">${esc(g)}</div><ul>` + list.map(it => {
+      const id = `r${idx}i${uid++}`;
       const p = packsFor(it), skip = p === 0, on = !!tk[it.key];
       const qty = skip ? "skip" : (p == null ? `${Math.round(num(it.need))} ${esc(it.unit)}` : `${num(p)} ×`);
       const sub = skip ? `have enough` : (it.pack_label ? esc(it.pack_label) : "");
@@ -187,7 +189,7 @@ function render(){
       if (num(it.lasts_cycles) >= 1.5) bits.push(`one pack lasts ~${num(it.lasts_cycles)} cycles`);
       if (it.note) bits.push(esc(it.note));
       if (safeUrl(it.link)) bits.push(`<a href="${esc(safeUrl(it.link))}" target="_blank" rel="noopener">link</a>`);
-      return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-label="Got it"><span class="txt">${esc(it.name)}<span class="note">${bits.join(" · ")}</span></span><span class="qty">${qty}<small>${sub}</small></span></label></li>`;
+      return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-labelledby="${id}n ${id}q" aria-describedby="${id}d"><span class="txt"><span id="${id}n">${esc(it.name)}</span><span class="note" id="${id}d">${bits.join(" · ")}</span></span><span class="qty" id="${id}q">${qty}<small>${sub}</small></span></label></li>`;
     }).join("") + `</ul>`).join("");
     const isNext = idx === nextIdx, isDone = items.length && done === items.length;
     const manual = openState[`${state.cycle}:${r.id}`];

@@ -372,11 +372,11 @@ def shopping(plan, cycles=4):
     counts so alternating buys ("2 bags one cycle, 1 the next") and slow movers ("lasts ~3 cycles")
     are visible. Cost is reported three ways:
       - first_cycle_till_cost: what cycle 1 costs at the till (includes stocking slow movers)
-      - cycle_cost / weekly_cost: recurring PURCHASE spend — the average of what is actually paid per
-        cycle over a long simulation, so packs thrown away (carry: false, expired leftovers, rounding)
-        are included. Use this for the budget.
-      - consumed_value_per_cycle: value of the food actually eaten (need / pack x price); the gap to
-        cycle_cost is waste_per_cycle."""
+      - cycle_cost / weekly_cost: recurring cost = value of the food eaten (need / pack x price, so slow
+        movers keep their share however long a pack lasts) + value of what is thrown away (leftovers
+        with carry: false, lots that expire), measured from the discards in a long simulation. Use this
+        for the budget. Stock that merely carries over is neither cost nor waste.
+      - consumed_value_per_cycle / waste_per_cycle: the two parts."""
     W = cycle_weeks(plan)
     ING = plan["ingredients"]
     runs = _runs(plan)
@@ -422,11 +422,10 @@ def shopping(plan, cycles=4):
 
     lots = defaultdict(list)
     per_cycle = []
-    spend = []
-    horizon = max(cycles, BUDGET_CYCLES)   # long enough for slow movers (one pack lasting several cycles)
+    discarded = defaultdict(float)          # grams thrown away over the whole simulation
+    horizon = budget_horizon(plan, demand, cycles)
     for c in range(horizon):
         cyc = {}
-        spend_c = 0.0
         for r in runs:
             date = r["date"] + dt.timedelta(days=7 * W * c) if r["date"] else None
             for k, need in demand.get(r["id"], {}).items():
@@ -434,6 +433,7 @@ def shopping(plan, cycles=4):
                     continue
                 sh = ING[k].get("shop") or {}
                 if date:
+                    discarded[k] += sum(l[0] for l in lots[k] if l[1] is not None and l[1] < date and l[0] > 1e-6)
                     lots[k] = [l for l in lots[k] if l[1] is None or l[1] >= date]
                 have = sum(l[0] for l in lots[k])
                 pack_amt = _pack_amount(ING[k])
@@ -450,12 +450,20 @@ def shopping(plan, cycles=4):
                 if leftover > 1e-6 and sh.get("carry", True):
                     exp = date + dt.timedelta(days=int(sh["shelf_days"])) if (date and sh.get("shelf_days")) else None
                     lots[k].append([leftover, exp])
+                elif leftover > 1e-6:
+                    discarded[k] += leftover            # carry: false — the rest of the pack is thrown away
                 cyc[(r["id"], k)] = (packs, have)
-                price = sh.get("price")
-                if packs and price is not None:
-                    spend_c += packs * price
         per_cycle.append(cyc)
-        spend.append(spend_c)
+    if plan.get("cycle", {}).get("start_date"):   # lots already past their date when the simulation ends
+        end = run_date(plan, 1, "Mon") + dt.timedelta(days=7 * W * horizon)
+        for k, ls in lots.items():
+            discarded[k] += sum(l[0] for l in ls if l[1] is not None and l[1] < end and l[0] > 1e-6)
+    waste = 0.0
+    for k, g in discarded.items():
+        price, pack_amt = (ING[k].get("shop") or {}).get("price"), _pack_amount(ING[k])
+        if price is not None and pack_amt:
+            waste += g / pack_amt * price
+    waste /= horizon
 
     out_runs = []
     till = 0.0
@@ -489,14 +497,32 @@ def shopping(plan, cycles=4):
         out_runs.append({**{k: v for k, v in r.items() if k not in ("t", "session")},
                          "date": r["date"].isoformat() if r["date"] else None, "items": items, "cost": cost})
     missing_price = sorted({i["name"] for r in out_runs for i in r["items"] if i["price_each"] is None})
-    recurring = sum(spend[1:]) / max(1, len(spend) - 1)   # cycle 1 is start-up stocking
+    recurring = prorated + waste
     return {"runs": out_runs, "first_cycle_till_cost": round(till, 2), "cycle_cost": round(recurring, 2),
             "weekly_cost": round(recurring / W, 2), "consumed_value_per_cycle": round(prorated, 2),
-            "waste_per_cycle": round(max(0.0, recurring - prorated), 2), "budget_cycles_simulated": horizon,
+            "waste_per_cycle": round(waste, 2), "budget_cycles_simulated": horizon,
             "warnings": sorted(set(warnings)), "missing_price": missing_price}
 
 
-BUDGET_CYCLES = 13   # cycles simulated for the recurring budget (≈ one year of 4-week cycles)
+BUDGET_CYCLES = 13        # minimum cycles simulated to measure discards (≈ one year of 4-week cycles)
+BUDGET_MAX_CYCLES = 260   # cap for very slow movers
+
+
+def budget_horizon(plan, demand, cycles):
+    """Cycles to simulate so every item with a shelf life gets through at least two packs — expiry waste
+    of slow movers (a spice jar opened once a year) only shows once a pack has run out its shelf life."""
+    ING = plan["ingredients"]
+    need = defaultdict(float)
+    for dd in demand.values():
+        for k, g in dd.items():
+            need[k] += g
+    longest = 0.0
+    for k, g in need.items():
+        sh = ING[k].get("shop") or {}
+        pack_amt = _pack_amount(ING[k])
+        if g > 0 and pack_amt and sh.get("shelf_days"):
+            longest = max(longest, pack_amt / g)
+    return int(min(BUDGET_MAX_CYCLES, max(cycles, BUDGET_CYCLES, math.ceil(2 * longest) + 1)))
 
 
 def _pack_amount(ingr):
@@ -620,9 +646,9 @@ def report(plan, res):
         if inv["startup_shortfalls"]:
             L.append(f"\nFirst cycle from an empty freezer runs short {len(inv['startup_shortfalls'])}× — plan an extra start-up cook (see shortfalls in computed.json).")
     sh = res["shopping"]
-    L.append(f"\n## Cost\n\nRecurring purchase spend ≈ {sh['cycle_cost']:.2f} per cycle · ≈ {sh['weekly_cost']:.2f} per week "
-             f"(average over {sh['budget_cycles_simulated']} simulated cycles, includes packs thrown away). "
-             f"Food actually eaten ≈ {sh['consumed_value_per_cycle']:.2f} per cycle, so waste ≈ {sh['waste_per_cycle']:.2f} per cycle. "
+    L.append(f"\n## Cost\n\nRecurring cost ≈ {sh['cycle_cost']:.2f} per cycle · ≈ {sh['weekly_cost']:.2f} per week "
+             f"= food eaten ≈ {sh['consumed_value_per_cycle']:.2f} + thrown away ≈ {sh['waste_per_cycle']:.2f} per cycle "
+             f"(discards measured over {sh['budget_cycles_simulated']} simulated cycles). "
              f"First cycle at the till ≈ {sh['first_cycle_till_cost']:.2f} (includes stocking slow movers).")
     if sh["missing_price"]:
         L.append(f"\nNo price yet: {', '.join(sh['missing_price'])}")

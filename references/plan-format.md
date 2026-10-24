@@ -148,6 +148,7 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
   movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till), `cycle_cost` /
-  `weekly_cost` (recurring **purchase spend**: average actually paid per cycle over a year-long
-  simulation, including packs thrown away through rounding, `carry: false` or expiry — use this for
-  the budget), and `consumed_value_per_cycle` / `waste_per_cycle` (value of food eaten vs thrown away).
+  `weekly_cost` (recurring cost — use this for the budget) = `consumed_value_per_cycle` (food eaten,
+  pro-rated per pack, so a slow mover still costs its share every cycle) + `waste_per_cycle` (what
+  is actually thrown away: leftovers with `carry: false` and expired lots, measured in a long
+  simulation). Stock that carries over is neither.

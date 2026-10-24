@@ -39,11 +39,32 @@ class Budget(unittest.TestCase):
         sh = M.shopping(plan(carry=True, shelf=6, buy="fresh"))      # leftovers expire before next week's run
         self.assertEqual(sh["weekly_cost"], 10.0)
 
-    def test_report_names_purchase_spend_and_waste(self):
+    def test_report_names_cost_and_waste(self):
         p = plan(carry=False)
         text = M.report(p, M.compute(p))
-        self.assertIn("Recurring purchase spend", text)
-        self.assertIn("waste", text)
+        self.assertIn("Recurring cost ≈ 10.00 per cycle", text)
+        self.assertIn("thrown away ≈ 3.00", text)
+
+
+class ReviewFollowUp(unittest.TestCase):
+    """Review on PR #33."""
+    def test_slow_mover_keeps_its_share(self):
+        sh = M.shopping(plan(per_day_g=10, pack=1000, price=10.0))   # one pack lasts ~14 weeks
+        self.assertEqual(sh["weekly_cost"], 0.7)
+        self.assertEqual(sh["waste_per_cycle"], 0.0)
+
+    def test_carried_stock_is_not_waste(self):
+        sh = M.shopping(plan(per_day_g=90, pack=1000, price=100.0))   # never discarded, only carried
+        self.assertEqual(sh["waste_per_cycle"], 0.0)
+        self.assertEqual(sh["cycle_cost"], 63.0)
+
+    def test_slow_mover_with_shelf_life_counts_expiry(self):
+        # 70 g a week (drawn at each weekly run), 1 000 g pack usable until day 28: five weekly draws
+        # (days 0–28) use 350 g, the other 650 g is thrown away — one €10 pack every five weeks
+        sh = M.shopping(plan(per_day_g=10, pack=1000, price=10.0, shelf=28))
+        self.assertGreater(sh["budget_cycles_simulated"], 13)
+        self.assertAlmostEqual(sh["waste_per_cycle"], 1.3, delta=0.05)
+        self.assertAlmostEqual(sh["weekly_cost"], 2.0, delta=0.05)
 
 
 if __name__ == "__main__":

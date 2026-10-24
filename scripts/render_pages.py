@@ -159,8 +159,9 @@ def shopping_markdown(plan, comp):
             out.append(f"- [ ] **{it['name']}** — {qty}" + (" · " + " · ".join(bits) if bits else "") + f" *({'; '.join(extra)})*")
         out.append("")
     out += ["---", "", "## Cost", "", "| | Approx. " + cur + " |", "|---|---|"]
-    out.append(f"| Steady state per cycle | {sh['cycle_cost']:.0f} |")
+    out.append(f"| Recurring purchase spend per cycle (budget) | {sh['cycle_cost']:.0f} |")
     out.append(f"| Per week | {sh['weekly_cost']:.0f} |")
+    out.append(f"| of which food eaten / thrown away per cycle | {sh['consumed_value_per_cycle']:.0f} / {sh['waste_per_cycle']:.0f} |")
     out.append(f"| First cycle at the till | {sh['first_cycle_till_cost']:.0f} |")
     out += ["", "## Recipes (quick reference)", ""]
     for rk in plan["recipes"]:

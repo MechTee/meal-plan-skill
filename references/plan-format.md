@@ -147,5 +147,7 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   runs every week. Split fresh runs for perishables, e.g. Sat covers Sun–Wed and Wed covers Thu–Sat.
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
-  movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till) and `cycle_cost` /
-  `weekly_cost` (pro-rated steady state — use this for the budget).
+  movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till), `cycle_cost` /
+  `weekly_cost` (recurring **purchase spend**: average actually paid per cycle over a year-long
+  simulation, including packs thrown away through rounding, `carry: false` or expiry — use this for
+  the budget), and `consumed_value_per_cycle` / `waste_per_cycle` (value of food eaten vs thrown away).

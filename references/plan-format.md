@@ -27,6 +27,7 @@ and lists every unknown key reference.
 | name | plan name shown on pages |
 | athlete, bw_kg | body weight drives protein/kg and per-feeding targets on pages |
 | currency, locale, country | `"EUR"`, `"de-DE"` — formatting on the shopping page |
+| ffm_kg, exercise_kcal, goal | fat-free mass (from `targets.py` → `bmr.ffm_kg`) and planned exercise energy per day type, e.g. `{"training": 435, "rest": 0}` — the check computes energy availability per day; a day can override with its own `exercise_kcal`. `goal: "cut"` makes a missing EA check a flag |
 | freezer_portions | freezer capacity in containers; the check flags the peak above it |
 | workbook_notes | list of short notes shown under the Week summary title (e.g. week-2/4 swaps) |
 | ref_label | footer text for the micro bars, e.g. "Bars show % of your daily aim (D-A-CH + athlete adjustments)." |

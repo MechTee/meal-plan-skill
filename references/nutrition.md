@@ -26,7 +26,11 @@ unsure it is current, check the source (dge.de, efsa.europa.eu) with a quick sea
 - Training day vs rest day: same protein and fat, carbs absorb the difference.
 - Goal adjustment:
   - Cut: 0.5–1.0 % body weight per week (≈ 7 700 kcal per kg); slower the leaner they are.
-    Keep energy availability ≥ 30 kcal/kg FFM/day (≥ 45 ideal); below 30 is RED-S territory.
+    Energy availability (EA) = (intake − exercise energy expenditure) / fat-free mass. Exercise
+    expenditure is the planned sessions above resting ((MET − 1) × kg × h); steps and job activity
+    are not subtracted. Below ~30 kcal/kg FFM/day is associated with REDs (IOC 2023) — revise the
+    plan and screen for symptoms; 30–45 is expected in a cut; ~45 is energy balance in the original
+    female research (men often balance lower). Screening numbers, ±15–25 %, not diagnostic.
   - Lean gain (trained): ≈ 0.25–0.5 % body weight per month → usually +5–10 % kcal.
     Novices can gain faster.
   - Recomposition: maintenance, high protein.

@@ -10,8 +10,11 @@ CLI:
   python mealplan.py check   plan.json            -> markdown report (targets, micros, batches, cost)
   python mealplan.py compute plan.json out.json   -> computed.json used by the builders
 """
-import json, math, sys, datetime as dt
+import json, math, os, sys, datetime as dt
 from collections import defaultdict, OrderedDict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import energy
 
 MACROS = ["kcal", "protein_g", "fat_g", "satfat_g", "carb_g", "sugar_g", "fiber_g", "salt_g"]
 MICROS = ["thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "b6_mg", "biotin_ug",
@@ -538,6 +541,24 @@ def checks(plan, res):
         sc = res["days"][day]["total"]["score"]
         if sc and sc["scores"][sc["limiting"]] < 100:
             out["flags"].append(f"{day}: day-level amino-acid score {sc['scores'][sc['limiting']]} (limiting {sc['limiting']})")
+    # energy availability per day: (intake − planned exercise) / fat-free mass
+    meta = plan.get("meta", {})
+    ffm, ex = meta.get("ffm_kg"), meta.get("exercise_kcal") or {}
+    out["energy_availability"] = []
+    for day in WEEKDAYS:
+        d = plan["days"][day]
+        exercise = d.get("exercise_kcal", ex.get(d.get("type", "training")))
+        r = energy.assess(res["days"][day]["total"]["n"]["kcal"], exercise, ffm)
+        r["day"] = day
+        out["energy_availability"].append(r)
+        if r["band"] == "low":
+            out["flags"].append(f"{day}: energy availability {energy.describe(r)}")
+    if ffm is None or not ex:
+        msg = ("energy availability not checked — set meta.ffm_kg and meta.exercise_kcal "
+               "(from targets.py) so the plan's intake can be checked against training load")
+        out["ea_note"] = msg
+        if meta.get("goal") == "cut":
+            out["flags"].append(msg)
     mt = T.get("micros", {})
     for k, lim in mt.items():
         vals = [res["days"][d]["total"]["n"].get(k, 0) for d in WEEKDAYS]
@@ -591,6 +612,12 @@ def report(plan, res):
         for r in res["checks"]["micros"]:
             lab = MICRO_LABELS.get(r["key"], (r["key"], ""))
             L.append(f"| {lab[0]} ({lab[1]}) | {r['avg']:.1f} | {r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | {r['ul'] or '–'} | {r['status']} |")
+    L.append("\n## Energy availability (intake − planned exercise, per kg fat-free mass)\n")
+    if res["checks"].get("ea_note"):
+        L.append(res["checks"]["ea_note"])
+    else:
+        for r in res["checks"]["energy_availability"]:
+            L.append(f"- {r['day']}: {energy.describe(r)}")
     inv = res["inventory"]
     if inv["per_recipe"]:
         L.append("\n## Batch portions per cycle (steady state)\n")

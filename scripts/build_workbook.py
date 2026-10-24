@@ -59,6 +59,11 @@ AA0 = MIC0 + len(MICRO_KEYS)   # first AA column
 DIG = AA0 + len(AA_KEYS)
 
 
+def q(sheet):
+    """Sheet reference usable in a formula (quoted when it contains spaces or symbols)."""
+    return sheet if sheet.isalnum() else "'" + sheet.replace("'", "''") + "'"
+
+
 def ing_rng(col):
     c = L(col)
     return f"Ingredients!${c}${ING_FIRST}:${c}${ING_LAST}"
@@ -120,14 +125,20 @@ def build_ingredients(wb, plan):
     return rows
 
 
-def build_day(wb, plan, day):
-    d = plan["days"][day]
-    ws = wb.create_sheet(day)
+def build_day(wb, plan, day, d=None, sheet=None, weeks=None):
+    """One day sheet. Template days use plan.days; week overrides get their own sheet ("Sat wk2+4")."""
+    W = M.cycle_weeks(plan)
+    d = d or plan["days"][day]
+    weeks = weeks or list(range(1, W + 1))
+    sheet = sheet or day
+    ws = wb.create_sheet(sheet)
     T = plan.get("targets", {})
     t = T.get(d.get("type", "training"), {})
     title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
     if d.get("label") and d["label"] != M.DAYNAMES[day]:
         title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}{d['label'][len(M.DAYNAMES[day]):]}"
+    wk = "" if len(weeks) == W else f" · week{'s' if len(weeks) > 1 else ''} {', '.join(map(str, weeks))}"
+    title += wk
     put(ws, "A1", title, bold=True, size=13)
     free = T.get("free_kcal")
     put(ws, "A2", f"Target: {t.get('kcal', 0):,} kcal planned" + (f" (+{free} free)" if free else "") +
@@ -199,7 +210,8 @@ def build_day(wb, plan, day):
         ws.column_dimensions[L(i)].width = 11
     ws.row_dimensions[4].height = 30
     ws.freeze_panes = "B5"
-    return {"sheet": day, "meals": meals, "total": tot, "type": d.get("type", "training"), "title": title}
+    return {"sheet": sheet, "day": day, "weeks": weeks, "meals": meals, "total": tot, "type": d.get("type", "training"),
+            "title": title, "row_label": M.DAYNAMES[day] + wk}
 
 
 def build_micros(wb, plan, days):
@@ -223,7 +235,7 @@ def build_micros(wb, plan, days):
             sh = dinfo["sheet"]
             for j, k in enumerate(MICRO_KEYS):
                 put(ws, f"{L(2 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{q(sh)}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{q(sh)}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.0#")
             r += 1
         put(ws, f"A{r}", "Day total", bold=True, fill=TOT_FILL)
@@ -258,10 +270,10 @@ def build_eaa(wb, plan, days):
         sh = dinfo["sheet"]
         for m in dinfo["meals"]:
             put(ws, f"A{r}", m["name"])
-            put(ws, f"B{r}", f"={sh}!F{m['sub']}", color=GREEN, fmt="0.0")
+            put(ws, f"B{r}", f"={q(sh)}!F{m['sub']}", color=GREEN, fmt="0.0")
             for j, a in enumerate(AA_KEYS):
                 put(ws, f"{L(3 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{q(sh)}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{q(sh)}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.00")
             put(ws, f"N{r}", f"=SUM(C{r}:M{r})", fmt="0.0")
             put(ws, f"O{r}", f'=IF(B{r}<10,"–",IF(E{r}>=2.5,"yes","no"))')
@@ -280,12 +292,20 @@ def build_eaa(wb, plan, days):
     return totals
 
 
+def weighted(col, first_row, days, W, per_week=False):
+    """Cycle-weighted average of a column: each row counts once per week that uses it."""
+    terms = "+".join(f"{col}{first_row + i}*{len(d['weeks'])}" for i, d in enumerate(days))
+    return f"=({terms})/{W}" if per_week else f"=({terms})/{7 * W}"
+
+
 def build_week(wb, plan, days, mic_tot, eaa_tot):
     ws = wb["Week summary"]
     T = plan.get("targets", {})
     put(ws, "A1", "Week summary — nutrients per day", bold=True, size=13)
+    W = M.cycle_weeks(plan)
     put(ws, "A2", "Day values link to the day sheets (green). Blue = targets from the plan plus general references "
-                  "(fiber ≥ 30 g, salt ≤ 6 g).", color=GREY, italic=True)
+                  f"(fiber ≥ 30 g, salt ≤ 6 g). Days changed in some weeks of the {W}-week cycle have their own rows and sheets; "
+                  "averages are over every day of the cycle.", color=GREY, italic=True)
     notes = plan.get("meta", {}).get("workbook_notes", [])
     if notes:
         put(ws, "A3", " · ".join(notes), color=GREY, italic=True)
@@ -297,10 +317,10 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     for dinfo in days:
         sh, tot = dinfo["sheet"], dinfo["total"]
         t = T.get(dinfo["type"], {})
-        put(ws, f"A{r}", M.DAYNAMES[sh])
+        put(ws, f"A{r}", dinfo["row_label"])
         put(ws, f"B{r}", dinfo["type"].capitalize())
         for j, (_, _, fmt) in enumerate(MAC_COLS):
-            put(ws, f"{L(3 + j)}{r}", f"={sh}!{L(5 + j)}{tot}", color=GREEN, fmt=fmt)
+            put(ws, f"{L(3 + j)}{r}", f"={q(sh)}!{L(5 + j)}{tot}", color=GREEN, fmt=fmt)
         put(ws, f"K{r}", t.get("kcal"), color=BLUE, fmt="#,##0")
         put(ws, f"L{r}", f"=C{r}-K{r}", fmt="+#,##0;-#,##0;0")
         put(ws, f"M{r}", t.get("protein_g"), color=BLUE)
@@ -308,10 +328,29 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
         put(ws, f"O{r}", T.get("fiber_min", 30), color=BLUE)
         put(ws, f"P{r}", T.get("salt_max", 6), color=BLUE)
         r += 1
-    put(ws, f"A{r}", "Week average", bold=True, fill=TOT_FILL)
+    put(ws, f"A{r}", "Cycle average (per day)", bold=True, fill=TOT_FILL)
     for c in range(3, 15):
         col = L(c)
-        put(ws, f"{col}{r}", f"=AVERAGE({col}5:{col}{r - 1})", bold=True, fmt="#,##0" if c in (3, 11, 12) else "0", fill=TOT_FILL)
+        put(ws, f"{col}{r}", weighted(col, 5, days, W), bold=True, fmt="#,##0" if c in (3, 11, 12) else "0", fill=TOT_FILL)
+    top_rows = {dinfo["sheet"]: 5 + i for i, dinfo in enumerate(days)}
+
+    # calendar of the whole cycle: which definition each actual day uses
+    for title, col, fmt in (("Cycle calendar — kcal per day", "C", "#,##0"), ("Cycle calendar — protein g per day", "D", "0")):
+        r += 3
+        put(ws, f"A{r}", title, bold=True, size=12)
+        r += 1
+        put(ws, f"A{r}", "Week", bold=True, fill=HDR_FILL)
+        for i, day in enumerate(M.WEEKDAYS):
+            put(ws, f"{L(2 + i)}{r}", day, bold=True, fill=HDR_FILL)
+        put(ws, f"I{r}", "Average", bold=True, fill=HDR_FILL)
+        r += 1
+        for w in range(1, W + 1):
+            put(ws, f"A{r}", f"Week {w}")
+            for i, day in enumerate(M.WEEKDAYS):
+                dinfo = next(x for x in days if x["day"] == day and w in x["weeks"])
+                put(ws, f"{L(2 + i)}{r}", f"={col}{top_rows[dinfo['sheet']]}", color=BLACK, fmt=fmt)
+            put(ws, f"I{r}", f"=AVERAGE(B{r}:H{r})", fmt=fmt)
+            r += 1
     ws.conditional_formatting.add(f"L5:L{r - 1}", FormulaRule(formula=["ABS(L5)>0.05*K5"], font=Font(name=FONT, color="C00000", bold=True)))
     ws.conditional_formatting.add(f"I5:I{r - 1}", FormulaRule(formula=["I5<O5"], font=Font(name=FONT, color="C00000", bold=True)))
 
@@ -326,23 +365,23 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     r += 1
     m0 = r
     for dinfo in days:
-        put(ws, f"A{r}", M.DAYNAMES[dinfo["sheet"]])
+        put(ws, f"A{r}", dinfo["row_label"])
         for j, _ in enumerate(MICRO_KEYS):
             put(ws, f"{L(2 + j)}{r}", f"=Micros!{L(2 + j)}{mic_tot[dinfo['sheet']]}", color=GREEN, fmt="0.0#")
         r += 1
     m1 = r - 1
     mt = T.get("micros", {})
     rows = {}
-    for label, key, color in (("Food average", None, BLACK), ("Supplements / day", "supplement", BLUE), ("Average incl. supplements", None, BLACK),
+    for label, key, color in (("Food average (cycle)", None, BLACK), ("Supplements / day", "supplement", BLUE), ("Average incl. supplements", None, BLACK),
                               ("Floor (reference)", "floor", BLUE), ("Aim (athlete)", "aim", BLUE), ("Upper limit", "ul", BLUE), ("% of aim", None, BLACK)):
         put(ws, f"A{r}", label, bold=True)
         rows[label] = r
         for j, k in enumerate(MICRO_KEYS):
             col = L(2 + j)
-            if label == "Food average":
-                put(ws, f"{col}{r}", f"=AVERAGE({col}{m0}:{col}{m1})", fmt="0.0#")
+            if label == "Food average (cycle)":
+                put(ws, f"{col}{r}", weighted(col, m0, days, W), fmt="0.0#")
             elif label == "Average incl. supplements":
-                put(ws, f"{col}{r}", f"={col}{rows['Food average']}+N({col}{rows['Supplements / day']})", fmt="0.0#")
+                put(ws, f"{col}{r}", f"={col}{rows['Food average (cycle)']}+N({col}{rows['Supplements / day']})", fmt="0.0#")
             elif label == "% of aim":
                 put(ws, f"{col}{r}", f"=IF(N({col}{rows['Aim (athlete)']})=0,\"\",{col}{rows['Average incl. supplements']}/{col}{rows['Aim (athlete)']})", fmt="0%")
             else:
@@ -370,14 +409,14 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     r += 1
     a0 = r
     for dinfo in days:
-        put(ws, f"A{r}", M.DAYNAMES[dinfo["sheet"]])
+        put(ws, f"A{r}", dinfo["row_label"])
         for c in range(2, 14):
             put(ws, f"{L(c)}{r}", f"=EAA!{L(c)}{eaa_tot[dinfo['sheet']]}", color=GREEN, fmt="0.0")
         r += 1
     a1 = r - 1
-    put(ws, f"A{r}", "Week total", bold=True)
+    put(ws, f"A{r}", "Average week (cycle)", bold=True)
     for c in range(2, 14):
-        put(ws, f"{L(c)}{r}", f"=SUM({L(c)}{a0}:{L(c)}{a1})", fmt="0")
+        put(ws, f"{L(c)}{r}", weighted(L(c), a0, days, W, per_week=True), fmt="0")
     wt = r
     r += 2
     put(ws, f"A{r}", "Scoring vs FAO 2013 adult pattern (mg per g protein; unadjusted for digestibility — the cooking pages show the digestibility-corrected estimate)",
@@ -413,11 +452,17 @@ def build(plan, out):
     wb.create_sheet("EAA")
     del wb["Micros"], wb["EAA"]
     build_ingredients(wb, plan)
-    days = [build_day(wb, plan, d) for d in M.WEEKDAYS]
+    days = []
+    for g in M.day_groups(plan):
+        if g["override"]:
+            sheet = f"{g['day']} wk{'+'.join(map(str, g['weeks']))}"[:31]
+            days.append(build_day(wb, plan, g["day"], d=g["def"], sheet=sheet, weeks=g["weeks"]))
+        else:
+            days.append(build_day(wb, plan, g["day"], weeks=g["weeks"]))
     mic = build_micros(wb, plan, days)
     eaa = build_eaa(wb, plan, days)
     build_week(wb, plan, days, mic, eaa)
-    order = ["Week summary", "Micros", "EAA", "Ingredients"] + M.WEEKDAYS
+    order = ["Week summary", "Micros", "EAA", "Ingredients"] + [d["sheet"] for d in days]
     wb._sheets = [wb[n] for n in order]
     wb.active = 0
     wb.save(out)

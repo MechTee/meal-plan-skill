@@ -227,6 +227,30 @@ def day_def(plan, week, day):
     return ov.get(day) or plan["days"][day]
 
 
+def day_groups(plan):
+    """Every distinct day definition actually eaten in the cycle.
+
+    Returns, per weekday, one group for the template definition (the weeks that use it) and one
+    group per distinct week override (identical overrides in several weeks are grouped). Each group:
+    {"day", "weeks", "override", "def", "label"}; groups with no weeks are omitted.
+    """
+    W = cycle_weeks(plan)
+    out = []
+    for day in WEEKDAYS:
+        tmpl = plan["days"][day]
+        groups = OrderedDict()
+        for w in range(1, W + 1):
+            d = day_def(plan, w, day)
+            key = "template" if d is tmpl else json.dumps(d, sort_keys=True)
+            g = groups.setdefault(key, {"day": day, "weeks": [], "override": key != "template", "def": d})
+            g["weeks"].append(w)
+        for g in groups.values():
+            all_weeks = len(g["weeks"]) == W
+            g["label"] = day if (all_weeks and not g["override"]) else f"{day} (wk {', '.join(map(str, g['weeks']))})"
+            out.append(g)
+    return out
+
+
 def meal_acc(plan, meal):
     acc = Acc()
     for p in meal.get("parts", []):
@@ -505,9 +529,18 @@ def compute(plan):
         a, meals = day_acc(plan, d)
         res["days"][day] = {"type": d.get("type", "training"), "total": a.export(),
                             "meals": [{"name": m["name"], **ma.export()} for m, ma in meals]}
-    # per-week day totals when overrides exist
+    # every distinct day actually eaten (template + week overrides), and the per-week calendar
+    res["cycle_days"] = []
+    for g in day_groups(plan):
+        a, meals = day_acc(plan, g["def"])
+        res["cycle_days"].append({"day": g["day"], "weeks": g["weeks"], "override": g["override"], "label": g["label"],
+                                  "type": g["def"].get("type", "training"), "total": a.export(),
+                                  "meals": [{"name": m["name"], **ma.export()} for m, ma in meals]})
     for w in range(1, W + 1):
-        res["weeks"][w] = {day: day_acc(plan, day_def(plan, w, day))[0].export()["n"] for day in WEEKDAYS}
+        res["weeks"][w] = {}
+        for cd in res["cycle_days"]:
+            if w in cd["weeks"]:
+                res["weeks"][w][cd["day"]] = cd["total"]["n"]
     res["inventory"] = inventory(plan)
     res["shopping"] = shopping(plan)
     res["checks"] = checks(plan, res)
@@ -517,10 +550,11 @@ def compute(plan):
 def checks(plan, res):
     T = plan.get("targets", {})
     out = {"days": [], "micros": [], "flags": []}
-    for day in WEEKDAYS:
-        n = res["days"][day]["total"]["n"]
-        t = T.get(res["days"][day]["type"], {})
-        row = {"day": day, "type": res["days"][day]["type"]}
+    for cd in res["cycle_days"]:
+        day = cd["label"]
+        n = cd["total"]["n"]
+        t = T.get(cd["type"], {})
+        row = {"day": day, "weeks": cd["weeks"], "override": cd["override"], "type": cd["type"]}
         for k in ("kcal", "protein_g", "carb_g", "fat_g", "fiber_g", "salt_g"):
             row[k] = round(n[k], 1)
             if k in t:
@@ -535,17 +569,20 @@ def checks(plan, res):
             out["flags"].append(f"{day}: fibre {n['fiber_g']:.0f} g under {T['fiber_min']} g")
         if T.get("salt_max") and n["salt_g"] > T["salt_max"] * 1.5:
             out["flags"].append(f"{day}: salt {n['salt_g']:.1f} g (pre-workout/intra salt may justify it — check)")
-        sc = res["days"][day]["total"]["score"]
+        sc = cd["total"]["score"]
         if sc and sc["scores"][sc["limiting"]] < 100:
             out["flags"].append(f"{day}: day-level amino-acid score {sc['scores'][sc['limiting']]} (limiting {sc['limiting']})")
     mt = T.get("micros", {})
+    # every actual day of the cycle (W x 7), so week overrides count in averages and maxima
+    actual = [cd for cd in res["cycle_days"] for _ in cd["weeks"]]
     for k, lim in mt.items():
-        vals = [res["days"][d]["total"]["n"].get(k, 0) for d in WEEKDAYS]
-        miss = max(res["days"][d]["total"]["mshare"].get(k, 0) for d in WEEKDAYS)
-        avg = sum(vals) / 7
+        vals = [cd["total"]["n"].get(k, 0) for cd in actual]
+        miss = max(cd["total"]["mshare"].get(k, 0) for cd in actual)
+        avg = sum(vals) / len(vals)
+        worst = max(actual, key=lambda cd: cd["total"]["n"].get(k, 0))["label"]
         row = {"key": k, "avg": round(avg, 2), "min": round(min(vals), 2), "max": round(max(vals), 2),
                "floor": lim.get("floor"), "aim": lim.get("aim"), "ul": lim.get("ul"),
-               "supplement": lim.get("supplement", 0), "missing_share": miss}
+               "supplement": lim.get("supplement", 0), "missing_share": miss, "max_day": worst}
         tot_avg = avg + (lim.get("supplement") or 0)
         row["avg_incl_supp"] = round(tot_avg, 2)
         st = "ok"
@@ -560,7 +597,8 @@ def checks(plan, res):
         row["status"] = st
         out["micros"].append(row)
         if st != "ok":
-            out["flags"].append(f"micro {k}: {st} — week avg {tot_avg:.1f} (floor {lim.get('floor')}, aim {lim.get('aim')}, UL {lim.get('ul')})")
+            extra = f"; highest day {worst} {max(vals) + (lim.get('supplement') or 0):.1f}" if st.startswith("ABOVE UL") else ""
+            out["flags"].append(f"micro {k}: {st} — cycle avg {tot_avg:.1f} (floor {lim.get('floor')}, aim {lim.get('aim')}, UL {lim.get('ul')}){extra}")
     inv = res["inventory"]
     for s in inv["steady_shortfalls"]:
         out["flags"].append(f"batch shortfall: {s['recipe']} short {s['short']} portions in week {s['week']} {s['day']}")
@@ -585,7 +623,7 @@ def report(plan, res):
         L.append(f"| {r['day']} | {r['type']} | {r['kcal']:.0f} | {r.get('kcal_delta', 0):+.0f} | {r['protein_g']:.0f} | "
                  f"{r.get('protein_g_delta', 0):+.0f} | {r['carb_g']:.0f} | {r['fat_g']:.0f} | {r['fiber_g']:.0f} | {r['salt_g']:.1f} |")
     if res["checks"]["micros"]:
-        L.append("\n## Micronutrients (week average, food + listed supplements)\n")
+        L.append("\n## Micronutrients (cycle average over every day incl. week overrides, food + listed supplements)\n")
         L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Status |")
         L.append("|---|---|---|---|---|---|---|")
         for r in res["checks"]["micros"]:

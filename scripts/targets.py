@@ -13,7 +13,7 @@ profile.json (anything missing falls back to a stated default):
   "diet": "omnivore"|"pescatarian"|"vegetarian"|"vegan",
   "protein_g_per_kg": null, "fat_pct": null,
   "sweat_l_per_session": 1.0, "sweat_sodium_mg_per_l": 1000,
-  "low_sun": true, "menstruating": false, "low_energy_availability_risk": false
+  "low_sun": true, "menstruating": true, "postmenopausal": false, "low_energy_availability_risk": false
 }
 Prints a markdown summary and writes targets.json in the plan.json "targets" shape.
 Numbers are starting estimates: tell the athlete to adjust kcal from the 7-day weight
@@ -54,7 +54,7 @@ REF_DATA = {  # key: (male, female, UL, note, type, derived, page)
     "magnesium_mg": (350, 300, None, "EFSA UL 250 mg applies to supplements only", "estimated value", 2021, "magnesium/"),
     "calcium_mg": (1000, 1000, 2500, "", "recommendation", 2013, "calcium/"),
     "zinc_mg": (14, 8, 25, "phytate-dependent (low/medium/high: ♂ 11/14/16, ♀ 7/8/10)", "recommendation", 2019, "zink/"),
-    "iron_mg": (11, 16, 40, "women: 16 mg while menstruating, 14 mg after menopause; EFSA safe level 40 mg (2024)",
+    "iron_mg": (11, 16, 40, "women: 16 mg while menstruating, 11 mg premenopausal without menstruation, 14 mg after menopause; EFSA safe level 40 mg (2024)",
                 "recommendation", 2023, "eisen/"),
     "selenium_ug": (70, 60, 255, "EFSA UL 255 µg (2023)", "estimated value", 2015, "selen/"),
     "iodine_ug": (150, 150, 600, "DGE lowered from 200 µg in 2025; plant drinks are rarely iodised", "recommendation", 2025, "jod/"),
@@ -171,9 +171,14 @@ def compute(p):
             aim = round(floor * 1.1, 1)
             why = ("high-phytate (plant-based) tier" if tier else "medium-phytate tier") + ", +10 % for sweat"
         if k == "iron_mg":
-            if sex == "female" and p.get("menstruating", True) is False:
+            # DGE 2023: 16 mg menstruating · 11 mg premenopausal without menstruation · 14 mg postmenopausal
+            if sex == "female" and p.get("postmenopausal"):
                 floor = aim = 14
                 why = "14 mg after menopause (DGE)"
+            elif sex == "female" and p.get("menstruating", True) is False:
+                floor = aim = 11
+                why = ("11 mg premenopausal without menstruation (DGE) — set postmenopausal: true if after "
+                       "menopause (14 mg); if periods stopped because of low energy availability, that needs review")
             if p["diet"] in ("vegetarian", "vegan"):
                 aim = round(floor * 1.8)
                 why = "×1.8 for non-haem iron bioavailability (IOM); check ferritin"

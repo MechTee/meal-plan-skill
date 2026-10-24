@@ -81,7 +81,7 @@ Reference values used by `targets.py` — DGE/ÖGE reference values, 3rd edition
 B1 1.2/1.0 (2015) · B2 1.4/1.1 (2015) · niacin 15/12 mg NE (2015) · B5 5 (2021) · B6 1.6/1.4 (2019; UL 12) ·
 biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg folic acid) · B12 4.0 µg (2018) ·
 K 4 000 (2016) · **P 550** (2024; was 700) · Mg 350/300 (2021) · Ca 1 000 (2013; UL 2 500) · Zn 11/14/16 ♂,
-7/8/10 ♀ by phytate (2019; UL 25) · **Fe 11 / 16 menstruating, 14 after menopause** (2023; EFSA safe level 40) ·
+7/8/10 ♀ by phytate (2019; UL 25) · **Fe 11 / 16 menstruating, 11 premenopausal without menstruation, 14 after menopause** (2023; EFSA safe level 40) ·
 Se 70/60 (2015; UL 255) · **I 150** (2025; was 200; UL 600) · vit A 850/700 µg RAE (2020; UL 3 000 retinol) ·
 C 110/95 (2015) · D 20 µg (2012; UL 100) · **E 8 mg** (2024; was 14/12; UL 300) · K 70/60 µg (2000) ·
 Na 1 500 mg (2016). Each value's page is linked in `targets.py` (`REF_DATA`) and in its output.

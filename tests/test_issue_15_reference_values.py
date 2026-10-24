@@ -34,8 +34,15 @@ class CurrentValues(unittest.TestCase):
             self.assertIn(src["type"], ("recommendation", "estimated value"), k)
 
     def test_postmenopausal_iron(self):
-        m = targets.compute(dict(FEMALE, menstruating=False))["targets"]["micros"]["iron_mg"]
+        m = targets.compute(dict(FEMALE, menstruating=False, postmenopausal=True))["targets"]["micros"]["iron_mg"]
         self.assertEqual(m["floor"], 14)
+
+    def test_non_menstruating_premenopausal_iron(self):
+        """Review on PR #44: no menstruation before menopause (e.g. hormonal contraception) is 11 mg, not 14."""
+        m = targets.compute(dict(FEMALE, menstruating=False))["targets"]["micros"]["iron_mg"]
+        self.assertEqual(m["floor"], 11)
+        self.assertIn("postmenopausal", m["note"])
+        self.assertEqual(targets.compute(FEMALE)["targets"]["micros"]["iron_mg"]["floor"], 16)
 
 
 class FloorVsAim(unittest.TestCase):

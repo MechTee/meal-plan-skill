@@ -161,7 +161,9 @@ python3 scripts/mealplan.py check plan.json
 Present the scratchpad **inline in the chat** (not as an artifact yet) using the template in
 `references/artifacts.md` → "Scratchpad": targets, a day-type table per meal (time, what, kcal/P/C/F),
 the weekly rotation, the batch rhythm (eaten / cooked / spare per dish), the pre-workout chain,
-supplements, micro status (only rows that are not "ok", plus the ones the athlete cares about),
+supplements, micro status (only rows that are not "ok", plus the ones the athlete cares about;
+show lower bounds as "≥" and say plainly when an upper limit could not be verified because of
+missing values — fill those values in phase 5 rather than calling them fine),
 estimated weekly cost, and open questions. Keep it scannable.
 
 Then ask for approval (structured question or plain text): **Approve and build** / **Change something** /

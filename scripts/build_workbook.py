@@ -258,7 +258,7 @@ def build_micros(wb, plan, days):
     put(ws, "A2", "Live formulas: grams on each day sheet × per-100 g values on the Ingredients sheet. Empty ingredient cells count as 0, "
                   "so a nutrient with missing data reads low — check the Ingredients sheet before acting on a gap.", color=GREY, italic=True)
     r = 4
-    totals = {}
+    totals, gaps = {}, {}
     for dinfo in days:
         put(ws, f"A{r}", dinfo["title"], bold=True)
         r += 1
@@ -281,12 +281,24 @@ def build_micros(wb, plan, days):
             col = L(2 + j)
             put(ws, f"{col}{r}", f"=SUM({col}{first}:{col}{r - 1})", bold=True, fmt="0.0#", fill=TOT_FILL)
         totals[dinfo["sheet"]] = r
-        r += 2
+        # data coverage: grams of the day's food whose Ingredients cell for this nutrient is empty
+        sh, last = dinfo["sheet"], dinfo["total"] - 1
+        put(ws, f"A{r + 1}", "Food without a value (g)", color=GREY, italic=True)
+        put(ws, f"A{r + 2}", "Share of the day's food without a value", color=GREY, italic=True)
+        for j, _ in enumerate(MICRO_KEYS):
+            col = L(2 + j)
+            put(ws, f"{col}{r + 1}",
+                f"=SUMPRODUCT(COUNTIFS({ing_rng(IDC)},{q(sh)}!$D$5:$D${last},{ing_rng(MIC0 + j)},\"\")*{q(sh)}!$C$5:$C${last})", fmt="0", color=GREY)
+            put(ws, f"{col}{r + 2}", f"=IFERROR({col}{r + 1}/SUM({q(sh)}!$C$5:$C${last}),0)", fmt="0%", color=GREY)
+        gaps[dinfo["sheet"]] = r + 2
+        ws.conditional_formatting.add(f"B{r + 2}:{L(1 + len(MICRO_KEYS))}{r + 2}",
+                                      CellIsRule(operator="greaterThan", formula=["0.01"], font=Font(name=FONT, color="B26B00", bold=True)))
+        r += 4
     ws.column_dimensions["A"].width = 30
     for j in range(len(MICRO_KEYS)):
         ws.column_dimensions[L(2 + j)].width = 12
     ws.freeze_panes = "B4"
-    return totals
+    return totals, gaps
 
 
 def build_eaa(wb, plan, days):
@@ -336,7 +348,7 @@ def weighted(col, first_row, days, W, per_week=False):
     return f"=({terms})/{W}" if per_week else f"=({terms})/{7 * W}"
 
 
-def build_week(wb, plan, days, mic_tot, eaa_tot):
+def build_week(wb, plan, days, mic_tot, eaa_tot, mic_gap=None):
     ws = wb["Week summary"]
     T = plan.get("targets", {})
     put(ws, "A1", "Week summary — nutrients per day", bold=True, size=13)
@@ -436,6 +448,33 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
                     if note:
                         c.comment = Comment(note, "plan")
         r += 1
+    # data completeness: missing values count as 0, so with gaps the average is only a lower bound
+    put(ws, f"A{r}", "Food without a value (max share of a day)", bold=True)
+    rows["gap"] = r
+    for j, _ in enumerate(MICRO_KEYS):
+        col = L(2 + j)
+        put(ws, f"{col}{r}", "=MAX(" + ",".join(f"Micros!{col}{mic_gap[d['sheet']]}" for d in days) + ")", fmt="0%")
+    r += 1
+    put(ws, f"A{r}", "Status", bold=True)
+    rows["status"] = r
+    for j, _ in enumerate(MICRO_KEYS):
+        col = L(2 + j)
+        avg, peak = f"{col}{rows['Average incl. supplements']}", f"(MAX({col}{m0}:{col}{m1})+N({col}{rows['Supplements / day']}))"
+        fl, aim, ul, gp = (f"N({col}{rows['Floor (reference)']})", f"N({col}{rows['Aim (athlete)']})",
+                           f"N({col}{rows['Upper limit']})", f"{col}{rows['gap']}")
+        put(ws, f"{col}{r}",
+            f'=IF(AND({fl}=0,{aim}=0,{ul}=0),IF({gp}>0.01,"≥ (no target)","no target"),'
+            f'IF(AND({ul}>0,{peak}>{ul}),"ABOVE UL",IF({gp}>0.01,'
+            f'IF({avg}<MAX({fl},{aim}),"≥ known part below "&IF({avg}<{fl},"floor","aim")&IF({ul}>0," · UL unverified",""),'
+            f'IF({ul}>0,"≥ aim · UL unverified","≥ aim (lower bound)")),'
+            f'IF({avg}<{fl},"below floor",IF({avg}<{aim},"below aim","ok")))))', wrap=True)
+    ws.row_dimensions[r].height = 42
+    st = f"B{r}:{L(1 + len(MICRO_KEYS))}{r}"
+    ws.conditional_formatting.add(st, FormulaRule(formula=[f'AND(B{r}<>"ok",B{r}<>"no target")'], font=Font(name=FONT, color="B26B00", bold=True)))
+    put(ws, f"A{r + 1}", "“≥”: some food has no value for this nutrient, so the real intake is higher than shown. "
+                         "Upper limits can only be confirmed once those values are filled in on the Ingredients sheet.",
+        color=GREY, italic=True)
+    r += 2
     pr = rows["% of aim"]
     rng = f"B{pr}:{L(1 + len(MICRO_KEYS))}{pr}"
     ws.conditional_formatting.add(rng, CellIsRule(operator="lessThan", formula=["0.9"], font=Font(name=FONT, color="C00000", bold=True)))
@@ -508,9 +547,9 @@ def build(plan, out):
             days.append(build_day(wb, plan, g["day"], d=g["def"], sheet=sheet, weeks=g["weeks"]))
         else:
             days.append(build_day(wb, plan, g["day"], weeks=g["weeks"]))
-    mic = build_micros(wb, plan, days)
+    mic, gap = build_micros(wb, plan, days)
     eaa = build_eaa(wb, plan, days)
-    build_week(wb, plan, days, mic, eaa)
+    build_week(wb, plan, days, mic, eaa, gap)
     order = ["Week summary", "Micros", "EAA", "Ingredients"] + [d["sheet"] for d in days]
     wb._sheets = [wb[n] for n in order]
     wb.active = 0

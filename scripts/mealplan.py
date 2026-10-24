@@ -126,6 +126,9 @@ def validate(plan):
     missing = [d for d in WEEKDAYS if d not in plan.get("days", {})]
     if missing:
         errs.append(f"days missing from template week: {missing}")
+    fz = plan.get("meta", {}).get("freezer_portions")
+    if fz is not None and (isinstance(fz, bool) or not isinstance(fz, (int, float)) or fz < 0):
+        errs.append("meta.freezer_portions must be a number ≥ 0 (0 = no freezer) or left out (capacity not checked)")
     sd = plan.get("cycle", {}).get("start_date")
     if sd and dt.date.fromisoformat(sd).weekday() != 0:
         errs.append("cycle.start_date must be a Monday (week 1, day 1)")
@@ -1058,7 +1061,7 @@ def checks(plan, res):
             out["flags"].append(f"batch surplus grows every cycle ({grow} portions, freezer +{fmt_num(inv['drift_per_cycle'])} "
                                 "containers per cycle) — no steady state: rebalance cooking vs eating, or set "
                                 "cycle.surplus_policy (discard/give away spares, or a verified horizon)")
-    if fz and inv["peak_total_portions"] > fz:
+    if fz is not None and inv["peak_total_portions"] > fz:   # 0 = no freezer: any frozen stock is a problem
         out["flags"].append(f"freezer: peak {inv['peak_total_portions']} containers stored vs capacity {fz}")
     for w in res["shopping"]["warnings"]:
         out["flags"].append("shopping: " + w)

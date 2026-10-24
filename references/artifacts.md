@@ -39,11 +39,11 @@ Sheets, in order — this matches the athlete's established workbook and must st
 
 | Sheet | Content |
 |---|---|
-| Week summary | rows Mon–Sun: type, kcal, protein, fat, sat, unsat, carbs, fibre, salt (green links to day sheets), targets (blue), Δ; week average; micronutrient table per day (links to Micros) with food average, supplements/day, average incl. supplements, floor, aim, UL, % of aim; EAA table per day (links to EAA) with FAO-pattern scoring and the limiting amino acid |
+| Week summary | one row per distinct day (template days, plus override days labelled "· weeks 2, 4"): type, kcal, protein, fat, sat, unsat, carbs, fibre, salt (green links to day sheets), targets (blue), Δ; cycle average weighted by how many weeks use each row; cycle calendar (kcal and protein for every week × day); micronutrient table per day (links to Micros) with food average, supplements/day, average incl. supplements, floor, aim, UL, % of aim; EAA table per day (links to EAA) with FAO-pattern scoring and the limiting amino acid |
 | Micros | per day block: one row per meal × 23 micronutrients (SUMPRODUCT/SUMIF formulas into Ingredients), day total |
 | EAA | per day block: per meal protein (link) + 11 essential amino acids, total, "Leucine ≥ 2.5 g?" |
 | Ingredients | per 100 g/ml: macros, Source, 23 micros (outline-grouped), 11 amino acids (grouped), digestibility |
-| Mon … Sun | "Meal / ingredient · Sub-group · Amount (g/ml) · Ingredient (lookup) · kcal · Protein · Fat · sat · unsat · Carbs · Fiber · Salt"; meal header rows, subtotals, day total, target, Δ, energy split, protein per kg |
+| Mon … Sun (+ override days, e.g. "Sat wk2+4") | "Meal / ingredient · Sub-group · Amount (g/ml) · Ingredient (lookup) · kcal · Protein · Fat · sat · unsat · Carbs · Fiber · Salt"; meal header rows, subtotals, day total, target, Δ, energy split, protein per kg |
 
 Lookups: every formula matches ingredients by the **ID** column on the Ingredients sheet (e.g.
 `ING_SOY_CHUNKS`, derived from the plan key, letters/digits/underscore only) — never by the display

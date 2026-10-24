@@ -125,9 +125,11 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 ```
 - All seven days are required (`Mon` … `Sun`). `type` is `training` or `rest` (picks targets).
 - `label` may carry a suffix, e.g. `"Wednesday (legs)"` → sheet title "Wednesday — Training (legs)".
-- `week_overrides` replaces whole days in specific weeks of the cycle (`"2": {"Sat": {…}}`). The
-  workbook shows the template week; overrides feed batch balance and shopping, and should be
-  mentioned in `meta.workbook_notes`.
+- `week_overrides` replaces whole days in specific weeks of the cycle (`"2": {"Sat": {…}}`).
+  Overrides are first-class: `mealplan.py check` evaluates every actual day of the cycle (labels like
+  `Sat (wk 2, 4)`), micronutrient averages and maxima cover all `weeks × 7` days, and the workbook
+  gets one extra day sheet per distinct override (`Sat wk2+4`; identical overrides in several weeks
+  share a sheet) plus a cycle calendar on the Week summary.
 
 ## cycle
 

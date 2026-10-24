@@ -24,40 +24,50 @@ Scripts live in `scripts/`, templates in `assets/`, deeper guidance in `referenc
 `assets/example_plan.json` is a complete worked plan — read it once before writing your own
 `plan.json`; it is the fastest way to see the shape.
 
-**Toolkit setup (do this first).** If `scripts/mealplan.py` is not next to this file, the toolkit
-lives in the "Meal Plan" claude.ai Project under `claude/athlete-meal-plan-kit/`. Restore it into a
-working folder `amp/` with the same layout — `Projects project_read` each path below and write the
-content (or copy the local file the read returns for large files) to `amp/<path>`:
+**This skill is a folder, not just this file.** It needs `scripts/`, `assets/` and `references/`
+next to SKILL.md (see README.md for installation). If `scripts/mealplan.py` is missing, the install is
+incomplete: tell the user, point them to the repository README to reinstall the full folder, and
+don't try to rebuild the scripts from memory. The interview (phase 2) can start meanwhile.
 
-```
-scripts/mealplan.py  scripts/targets.py  scripts/build_workbook.py  scripts/render_pages.py
-assets/recipe_page.html  assets/shopping_list.html  assets/example_plan.json
-references/interview.md  references/nutrition.md  references/plan-format.md
-references/sourcing.md  references/artifacts.md
-```
+Python 3.10+ with `openpyxl` is required (`pip install -r requirements.txt`). LibreOffice is
+optional (workbook recalculation and error check); Playwright is optional (page screenshots).
 
-Then treat `amp/` as this skill's directory for every path below. If the session has no access to
-that Project, say the toolkit isn't reachable from here and ask the athlete to run this in the
-Meal Plan project (the interview and targets can still start meanwhile).
+## Host capabilities
+
+Hosts differ. Before phase 2, check which tools this session actually has and use the first
+available option in each row — never stall because a preferred tool is missing.
+
+| Need | Preferred | Fallback |
+|---|---|---|
+| Structured questions | `AskUserQuestion` (≤ 4 questions per call) | numbered options in a normal message, one topic per message; the user answers with numbers or text |
+| Workbook recalculation | `python3 scripts/recalc.py` (LibreOffice) | exit code 3 = no LibreOffice: deliver the workbook anyway (Excel, LibreOffice and Google Sheets compute formulas on open), say it was not error-checked here, and rely on `mealplan.py check` for the numbers |
+| Delivering files | a file-delivery tool (`SendUserFile`, `present_files`, …) | write to an `outputs/` folder in the working directory and give the paths |
+| HTML pages | an artifact/publishing tool, if the host has one | deliver the `.html` files; they are self-contained and open in any browser (tick state stays in that browser) |
+| Parallel research | a subagent tool | research products one shop at a time |
+| Memory, project docs, Drive | whatever connectors exist | ask the user; none of them is required |
+
+Name the fallbacks you use once, in a line, so the user knows what they get.
 
 ---
 
 ## 1 · Gather what is already known
 
-Before asking anything, look for answers the athlete already gave: memory files (body stats,
-diet, training, an existing nutrition plan), the attached Project's docs, earlier artifacts
-(cooking pages, shopping lists) and a meal-plan workbook in Drive if a Drive connector is present.
+Before asking anything, look for answers the athlete already gave, in whatever this host offers:
+memory (body stats, diet, training, an existing nutrition plan), attached project docs, earlier
+outputs (cooking pages, shopping lists, a previous `plan.json`) and an existing meal-plan workbook
+(uploaded, or in a connected drive).
 Anything found becomes a pre-filled default the athlete only confirms. If a full plan already
 exists, ask one question first: build a new plan, or revise the existing one (then skip to the
 phase the change touches — most revisions are phase 4 → 6).
 
-When the athlete says "the research was already done" or points at earlier artifacts, retrieve
-those values (Artifact `read`, Drive download) rather than recomputing them from databases.
+When the athlete says "the research was already done" or points at earlier outputs, retrieve
+those values (read the earlier page or file) rather than recomputing them from databases.
 
 ## 2 · Depth picker + interview
 
-The athlete chooses how deep each topic goes. Ask with `AskUserQuestion` — it takes at most four
-questions per call, so the seven topics go in two calls (4 + 3). Every topic gets the same four
+The athlete chooses how deep each topic goes. Ask with `AskUserQuestion` when available — it takes
+at most four questions per call, so the seven topics go in two calls (4 + 3); otherwise list the
+seven topics with the four options in one message. Every topic gets the same four
 options, in this order:
 
 - **Skip** — use what you already know or sensible defaults (say which defaults afterwards)
@@ -78,7 +88,8 @@ Topics, in order:
 Then interview topic by topic at the chosen depth. The question bank, per topic and depth, is in
 `references/interview.md` — read it now. Rules that keep the interview pleasant:
 
-- Use `AskUserQuestion` with concrete options (≤ 4 questions per call); the athlete can always type.
+- Use concrete options (≤ 4 questions per `AskUserQuestion` call, or a short numbered list); the
+  athlete can always answer in their own words.
   Pre-fill known answers as the first option, marked "(current)".
 - Never ask what you can calculate or already know. Group related questions in one call.
 - Safety screens are asked whatever depth was chosen (age band, health conditions or medication
@@ -143,7 +154,7 @@ the weekly rotation, the batch rhythm (eaten / cooked / spare per dish), the pre
 supplements, micro status (only rows that are not "ok", plus the ones the athlete cares about),
 estimated weekly cost, and open questions. Keep it scannable.
 
-Then ask for approval with `AskUserQuestion`: **Approve and build** / **Change something** /
+Then ask for approval (structured question or plain text): **Approve and build** / **Change something** /
 **Show a full day in detail**. Loop until approved. When the athlete proposes a change, simulate it
 (edit a copy of plan.json, run check) and show the before → after on the numbers it moves before
 applying it. Nothing in phase 6 is built before an explicit approval. The one exception: the
@@ -159,8 +170,8 @@ plan stops being approximate. Follow `references/sourcing.md`:
   (USDA FDC, BLS, CoFID, CIQUAL, NEVO…) for micros and amino acids the label lacks. Put the product
   and database id in `source`. If the athlete has receipts, photos or label text, those win.
 - Pack size, price, store and link per ingredient (`shop`), shelf life for fresh items.
-- Research in parallel with subagents when there are many products; tell them not to invent prices
-  or URLs and to return "not found" instead.
+- Research in parallel with subagents when the host has them and there are many products; tell them
+  not to invent prices or URLs and to return "not found" instead.
 
 Re-run the check. If anything moves materially (a day's kcal by > 5 %, a micro crosses a floor or
 UL, weekly cost by > 15 %), tell the athlete what moved and why before building.
@@ -171,44 +182,44 @@ Generate everything from the same `plan.json`:
 
 ```bash
 python3 scripts/build_workbook.py plan.json Meal_Plan_Macros.xlsx
-python3 <xlsx skill dir>/scripts/recalc.py Meal_Plan_Macros.xlsx 90   # e.g. /mnt/skills/public/xlsx — must report 0 errors
+python3 scripts/recalc.py Meal_Plan_Macros.xlsx              # 0 errors required; exit 3 = no LibreOffice (see Host capabilities)
+python3 scripts/check_workbook.py plan.json Meal_Plan_Macros.xlsx   # workbook numbers vs engine (after recalc)
 python3 scripts/render_pages.py plan.json pages/
 ```
 
 1. **Meal-plan workbook** (`Meal_Plan_Macros.xlsx`) — sheets *Week summary · Micros · EAA ·
    Ingredients · Mon … Sun*, blue inputs, green cross-sheet links, all nutrients live formulas back
-   to the Ingredients sheet. Read the xlsx skill's SKILL.md before the first build in a session.
-   Deliver with `SendUserFile`. If the athlete keeps the plan in Google Sheets and a Drive connector
-   is present, offer to upload/replace it there.
+   to the Ingredients sheet. Deliver it as a file (see Host capabilities). If the athlete keeps the
+   plan in Google Sheets and a drive connector is present, offer to upload/replace it there.
 2. **Shopping list** (`pages/shopping-list.html`) — dated runs for the coming cycle (stock-up,
    batch shops on cook days, fresh runs), whole packs after leftovers, alternating buys, per-run and
-   weekly cost, tick boxes per run and cycle. Publish as an artifact. If a Project is attached, also
-   write the markdown version to the Project (format in `references/artifacts.md`) so it sits next
-   to the other plan docs; keep a dated changelog line in its header on later edits.
+   weekly cost, tick boxes per run and cycle. `pages/shopping-list.md` is the same list as markdown:
+   if the host has project docs, save it there next to the other plan docs; keep a dated changelog
+   line in its header on later edits.
 3. **Batch recipes** — one cooking page per batch recipe plus a cook-day page per session
    (`cook-*.html`): everything to buy and cook that day, in order.
 4. **Recipe handouts** — one cooking page per non-batch recipe (breakfast, shakes, salad,
    pre-workout drink, plates). Each page: macro readout, tickable ingredients, prep, steps with
    timers, amino-acid score, micro footer.
 
-Before the first publish, load the `artifact-design` skill (required by the Artifact tool). The
-templates already follow it, so this is a check, not a redesign. Publish one artifact per page
-(icons: `recipe` for cooking pages, `cart` for the shopping list), in one batch at the end, then
-give one line per artifact group. If the athlete wants ticks synced across phone and laptop, load
-`artifact-capabilities` and add the shared-state capability to the shopping list.
+If the host can publish pages (an artifact or hosting tool), publish one page per file in one batch
+at the end, following any design or publishing guidance that host requires; the templates are
+already responsive, theme-aware and self-contained. Otherwise deliver the HTML files. Ticks are
+stored in the browser; cross-device sync needs a host feature for shared state, if one exists.
 
 ## 7 · Verify and hand over
 
 Before the final message:
 
-- `recalc.py` reported 0 errors, and three workbook cells match `mealplan.py` output (a day's kcal,
-  a micro total, a leucine total).
+- `recalc.py` reported 0 errors and `check_workbook.py` reported no mismatches (or, without
+  LibreOffice, say the workbook was not recalculated here).
 - Every recipe page and the shopping list opened without console errors (render a screenshot with
   Playwright if available) and their numbers match the workbook for the same recipe/day.
 - Shopping totals cover the cycle: check report has no "shopping:" warnings and no batch
   shortfalls.
-- For high-stakes plans (competition prep, minors, medical conditions) have a fresh subagent
-  review plan.json against `references/nutrition.md` without seeing your reasoning.
+- For high-stakes plans (competition prep, minors, medical conditions) have a fresh subagent, if the
+  host has them, review plan.json against `references/nutrition.md` without seeing your reasoning;
+  otherwise re-read plan.json against that reference yourself before handing over.
 
 Hand over briefly: what was built, the starting targets with the 2–3-week adjustment rule, the
 two or three things the athlete must do (e.g. buy an iodine supplement, book a ferritin test),
@@ -219,7 +230,7 @@ change starts from it.
 
 The athlete will tweak the plan for weeks (swap a protein source, resize a batch, move a session).
 Edit `plan.json`, re-run `check`, show what moved, then regenerate only what is affected and
-republish to the same artifact URLs. Never patch numbers by hand in one output — the outputs would
+republish to the same page URLs if the host published them. Never patch numbers by hand in one output — the outputs would
 drift apart.
 
 ## Safety

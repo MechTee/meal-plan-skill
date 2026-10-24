@@ -8,7 +8,7 @@ Sheet layout (matches the format established in the user's project workbook):
 Inputs are blue (grams on day sheets, per-100 g values, targets), cross-sheet links are green,
 calculations are black. Every nutrient number is a live formula back to the Ingredients sheet,
 so editing a gram amount or a label value recalculates days, micros, amino acids and the week.
-Run the xlsx skill's recalc.py on the output afterwards and fix anything it reports.
+Run scripts/recalc.py on the output afterwards and fix anything it reports.
 """
 import sys, json
 from openpyxl import Workbook

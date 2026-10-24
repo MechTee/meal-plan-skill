@@ -38,6 +38,8 @@ scripts/
   mealplan.py                 core engine: nutrients, amino-acid scores, batch inventory, shopping, checks
   build_workbook.py           Excel workbook with live formulas (openpyxl)
   render_pages.py             recipe pages, cook-day pages, shopping list (HTML + markdown)
+  recalc.py                   recalculate the workbook with headless LibreOffice and list formula errors
+  check_workbook.py           cross-check a recalculated workbook against the engine
 assets/
   recipe_page.html            cooking-page template (timers, tick boxes, amino acids, micro footer)
   shopping_list.html          shopping-list template (dated runs, cycles, per-run ticks, costs)
@@ -48,12 +50,15 @@ references/
   plan-format.md              plan.json schema
   sourcing.md                 finding label values, packs and prices (with notes for Germany)
   artifacts.md                output specs and the scratchpad template
-evals/                        three test cases in the `claude plugin eval` layout
+evals/                        model-level test cases in the `claude plugin eval` layout
+tests/                        script regression tests (python3 -m unittest discover tests)
+requirements.txt              Python dependencies
 ```
 
 ## Running the scripts directly
 
-Requires Python 3.10+ and `openpyxl`. Recalculating the workbook needs LibreOffice.
+Requires Python 3.10+ and `openpyxl` (`pip install -r requirements.txt`). Optional:
+LibreOffice for recalculating and error-checking the workbook, Playwright for page screenshots.
 
 ```bash
 # targets from an interview profile (fields are listed in the script's docstring)
@@ -64,6 +69,8 @@ python3 scripts/mealplan.py check assets/example_plan.json
 
 # build the workbook and the pages
 python3 scripts/build_workbook.py assets/example_plan.json Meal_Plan_Macros.xlsx
+python3 scripts/recalc.py Meal_Plan_Macros.xlsx
+python3 scripts/check_workbook.py assets/example_plan.json Meal_Plan_Macros.xlsx
 python3 scripts/render_pages.py assets/example_plan.json pages/
 ```
 
@@ -73,10 +80,35 @@ cost at the till and the pro-rated weekly cost.
 
 ## Installing as a skill
 
-Copy this folder into your skills directory (for Claude Code, `~/.claude/skills/athlete-meal-plan/`),
-or package it as a `.skill` file and add it in Claude. When `SKILL.md` is installed on its own
-(without `scripts/`, `assets/` and `references/`), the skill restores the toolkit from the
-"Meal Plan" claude.ai Project, where a copy is kept under `claude/athlete-meal-plan-kit/`.
+The skill is the whole folder — `SKILL.md` alone is not enough, because the instructions call the
+scripts, templates and references next to it. Everything it needs is in this repository; it does not
+depend on any private project, connector or other skill.
+
+**Claude Code**
+
+```bash
+git clone https://github.com/MechTee/meal-plan-skill ~/.claude/skills/athlete-meal-plan
+pip install -r ~/.claude/skills/athlete-meal-plan/requirements.txt
+```
+
+(or clone into `.claude/skills/athlete-meal-plan` inside a project to scope it to that project).
+
+**Claude apps (upload a skill)**
+
+```bash
+git clone https://github.com/MechTee/meal-plan-skill athlete-meal-plan
+cd athlete-meal-plan && git archive --format=zip --prefix=athlete-meal-plan/ -o ../athlete-meal-plan.zip HEAD
+```
+
+Upload `athlete-meal-plan.zip` in the app's skill settings.
+
+**Host differences.** The skill checks what the session can do and falls back when a tool is
+missing: structured questions → numbered questions in chat; LibreOffice recalculation → workbook
+delivered unrecalculated (it computes on open) with the numbers verified by the engine instead;
+file or page publishing tools → files written to an `outputs/` folder; subagents → sequential
+research.
+
+**Check an install:** `python3 -m unittest discover tests` runs the script regression tests.
 
 ## Notes and limits
 

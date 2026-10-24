@@ -4,8 +4,9 @@ session, and the dated shopping list.
 
   python render_pages.py plan.json out_dir [--only dal,chili] [--no-shopping] [--no-cookdays]
 
-Each page is a self-contained HTML file ready to publish with the Artifact tool (one artifact per
-page, so each can be opened on a phone in the kitchen or at the shop).
+Each page is a self-contained HTML file: open it in a browser, or publish it with whatever page
+hosting the host offers (one page per file, so each can be opened on a phone in the kitchen or at
+the shop).
 """
 import sys, os, json, argparse
 sys.path.insert(0, os.path.dirname(__file__))

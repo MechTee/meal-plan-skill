@@ -141,5 +141,43 @@ class BrowserProbe(unittest.TestCase):
                 browser.close()
 
 
+@unittest.skipUnless(HAVE_BROWSER, "Playwright not installed")
+class TickIdentity(unittest.TestCase):
+    """Review on PR #31: ingredient ticks keep the ingredient's identity, and hostile names round-trip."""
+    def render(self, plan, tmp):
+        plan_path = os.path.join(tmp, "plan.json")
+        with open(plan_path, "w", encoding="utf-8") as f:
+            json.dump(plan, f)
+        sys.argv = ["render_pages.py", plan_path, tmp, "--only", "oat_bowl", "--no-shopping", "--no-cookdays"]
+        R.main()
+
+    def test_replaced_ingredient_starts_unticked(self):
+        p = hostile_plan()
+        with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
+            try:
+                browser = pw.chromium.launch()
+            except Exception as e:
+                self.skipTest(f"Chromium not available: {e}")
+            self.render(p, tmp)
+            page = browser.new_page()
+            url = "file://" + os.path.join(tmp, "oat_bowl.html")
+            page.goto(url)
+            boxes = page.locator("#ing input[type=checkbox]")
+            n = boxes.count()
+            for i in range(n):
+                boxes.nth(i).check()          # includes the ingredients with quotes and markup in their names
+            page.reload()
+            self.assertEqual([boxes.nth(i).is_checked() for i in range(n)], [True] * n)
+            first = p["recipes"]["oat_bowl"]["items"][0][0]
+            p["recipes"]["oat_bowl"]["items"][0][0] = next(k for k in p["ingredients"]
+                                                         if k != first and k not in {it[0] for it in p["recipes"]["oat_bowl"]["items"]}
+                                                         and p["ingredients"][k].get("unit") == "g")
+            self.render(p, tmp)
+            page.reload()
+            self.assertFalse(boxes.nth(0).is_checked())                     # new ingredient at a ticked position
+            self.assertEqual([boxes.nth(i).is_checked() for i in range(1, n)], [True] * (n - 1))
+            browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()

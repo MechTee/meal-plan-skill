@@ -233,7 +233,9 @@ function bindTicks(root){
 function renderIng(){
   const list = D.ing["*"] || D.ing[state.variant] || [];
   $("ingCount").textContent = list.length + " items";
-  $("ing").innerHTML = list.map((x,i) => tickRow("i"+i,
+  // the tick key keeps the ingredient's identity (index + name, as before): a revised recipe that puts
+  // another ingredient at a ticked position starts unticked. esc() in tickRow makes any name safe.
+  $("ing").innerHTML = list.map((x,i) => tickRow("i"+i+":"+x[0],
     `<span class="txt">${esc(x[0])}${x[2]?`<span class="note">${esc(x[2])}</span>`:""}</span><span class="amt">${esc(x[1])}</span>`)).join("");
   bindTicks($("ing"));
 }

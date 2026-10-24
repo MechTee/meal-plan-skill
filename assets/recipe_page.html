@@ -220,7 +220,7 @@ function renderReadout(n){
 // so screen readers and voice control can tell items apart; extra notes become its description.
 function tickRow(id, inner, labelledby, describedby){
   const on = !!state.ticks[id];
-  return `<li><label class="row${on?" done":""}" data-id="${id}"><input type="checkbox" ${on?"checked":""} aria-labelledby="${labelledby}"${describedby?` aria-describedby="${describedby}"`:""}>${inner}</label></li>`;
+  return `<li><label class="row${on?" done":""}" data-id="${esc(id)}"><input type="checkbox" ${on?"checked":""} aria-labelledby="${labelledby}"${describedby?` aria-describedby="${describedby}"`:""}>${inner}</label></li>`;
 }
 function bindTicks(root){
   root.querySelectorAll("label.row").forEach(l => {
@@ -232,7 +232,9 @@ function bindTicks(root){
 function renderIng(){
   const list = D.ing["*"] || D.ing[state.variant] || [];
   $("ingCount").textContent = list.length + " items";
-  $("ing").innerHTML = list.map((x,i) => tickRow("i"+i,
+  // persisted tick key stays "i<index>:<name>" (as before) so saved ticks survive and a replaced ingredient
+  // starts unticked; the accessible-name ids (ing-n…) are separate DOM ids
+  $("ing").innerHTML = list.map((x,i) => tickRow("i"+i+":"+x[0],
     `<span class="txt"><span id="ing-n${i}">${esc(x[0])}</span>${x[2]?`<span class="note" id="ing-d${i}">${esc(x[2])}</span>`:""}</span><span class="amt" id="ing-a${i}">${esc(x[1])}</span>`,
     `ing-n${i} ing-a${i}`, x[2] ? `ing-d${i}` : "")).join("");
   bindTicks($("ing"));

@@ -67,6 +67,18 @@ class Browser(unittest.TestCase):
         page.get_by_text("Red lentils, split", exact=True).click()
         self.assertTrue(page.get_by_role("checkbox", name="Red lentils, split 300 g").is_checked())
 
+    def test_ticks_saved_before_the_change_still_load(self):
+        """Review on PR #41: localStorage written by the previous page version keys ingredients as i<n>:<name>."""
+        page = self.open("dal.html")
+        page.evaluate("""() => localStorage.setItem('cook:dal',
+                                 JSON.stringify({ticks: {'i0:Red lentils, split': true, 's0': true}}))""")
+        page.reload()
+        self.assertTrue(page.get_by_role("checkbox", name="Red lentils, split 300 g").is_checked())
+        self.assertTrue(page.locator("#steps input[type=checkbox]").first.is_checked())
+        page.get_by_role("checkbox", name="Red lentils, split 300 g").uncheck()
+        saved = page.evaluate("() => JSON.parse(localStorage.getItem('cook:dal')).ticks")
+        self.assertIs(saved["i0:Red lentils, split"], False)
+
     def test_keyboard_moves_through_items(self):
         page = self.open("dal.html")
         first = page.get_by_role("checkbox", name="Red lentils, split 300 g")

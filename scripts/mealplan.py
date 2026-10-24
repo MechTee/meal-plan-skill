@@ -586,6 +586,11 @@ def report(plan, res):
                  f"{r.get('protein_g_delta', 0):+.0f} | {r['carb_g']:.0f} | {r['fat_g']:.0f} | {r['fiber_g']:.0f} | {r['salt_g']:.1f} |")
     if res["checks"]["micros"]:
         L.append("\n## Micronutrients (week average, food + listed supplements)\n")
+        ref = plan.get("targets", {}).get("reference")
+        if ref:
+            L.append(f"Floors: {ref.get('name')}, {ref.get('population')} (checked {ref.get('checked')}).\n")
+        else:
+            L.append("Floors: reference version not recorded in plan.json (copy targets.reference from targets.py).\n")
         L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Status |")
         L.append("|---|---|---|---|---|---|---|")
         for r in res["checks"]["micros"]:

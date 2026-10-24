@@ -76,12 +76,15 @@ Athlete adjustments ("a bit higher, depending on nutrient")
 | B12 | 4 µg; vegans/near-vegans: supplement always | food sources unreliable |
 | Nitrate | 400–500 mg on training days (performance) | 6–8 mmol 2–3 h pre |
 
-Reference values used by `targets.py` (adults 25–50, ♂ / ♀, UL):
-B1 1.2/1.0 · B2 1.4/1.1 · B3 15/12 mg NE · B5 5 · B6 1.6/1.4 (UL 12) · biotin 40 µg · folate 300 µg
-DFE (UL 1 000 µg folic acid) · B12 4.0 µg · K 4 000 · P 700 (EFSA AI 550) · Mg 350/300 · Ca 1 000
-(UL 2 500) · Zn see tiers (UL 25) · Fe 11/16 (EFSA safe level 40) · Se 70/60 (UL 255) · I 200 (UL 600)
-· vit A 850/700 µg RAE (UL 3 000 retinol) · C 110/95 · D 20 µg (UL 100) · E 14/12 (UL 300) ·
-K 70/60 µg · Na 1 500 mg.
+Reference values used by `targets.py` — DGE/ÖGE reference values, 3rd edition (2025), adults 25–<51,
+♂ / ♀ (year of derivation), checked against dge.de on 2026-10-24; UL = EFSA:
+B1 1.2/1.0 (2015) · B2 1.4/1.1 (2015) · niacin 15/12 mg NE (2015) · B5 5 (2021) · B6 1.6/1.4 (2019; UL 12) ·
+biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg folic acid) · B12 4.0 µg (2018) ·
+K 4 000 (2016) · **P 550** (2024; was 700) · Mg 350/300 (2021) · Ca 1 000 (2013; UL 2 500) · Zn 11/14/16 ♂,
+7/8/10 ♀ by phytate (2019; UL 25) · **Fe 11 / 16 menstruating, 14 after menopause** (2023; EFSA safe level 40) ·
+Se 70/60 (2015; UL 255) · **I 150** (2025; was 200; UL 600) · vit A 850/700 µg RAE (2020; UL 3 000 retinol) ·
+C 110/95 (2015) · D 20 µg (2012; UL 100) · **E 8 mg** (2024; was 14/12; UL 300) · K 70/60 µg (2000) ·
+Na 1 500 mg (2016). Each value's page is linked in `targets.py` (`REF_DATA`) and in its output.
 
 Supplements and ULs: add regular supplements as a daily average (`supplement` in plan.json);
 the check compares food + supplement against UL. Multivitamins on top of a fortified diet often

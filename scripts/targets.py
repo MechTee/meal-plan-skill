@@ -29,34 +29,49 @@ MET = {  # Compendium of Physical Activities (Ainsworth 2011 / Herrmann 2024), g
 }
 BASE_PAL = {"desk": 1.25, "standing": 1.4, "manual": 1.6}  # incl. thermic effect of food, excl. extra steps/training
 
-# Reference values: D-A-CH (DGE/ÖGE/SGE) adults 25–<51 as of 2026 knowledge — floor = reference intake.
+# Reference values (floor): DGE/ÖGE reference values for nutrient intake, adults 25–<51 years, not pregnant or
+# breastfeeding. Each entry: male, female, UL, note, type, year of derivation ("Stand Ableitung") and source page.
 # UL = EFSA tolerable upper level (or safe level) for TOTAL intake unless noted.
-# Verify any value you are unsure of on dge.de / efsa.europa.eu before finalising a plan.
-REF = {  # key: (male, female, UL, note)
-    "thiamin_mg": (1.2, 1.0, None, "scales with energy intake"),
-    "riboflavin_mg": (1.4, 1.1, None, "scales with energy intake"),
-    "niacin_mg": (15, 12, None, "UL applies to supplemental nicotinamide/nicotinic acid only"),
-    "pantothenic_mg": (5, 5, None, "estimated value"),
-    "b6_mg": (1.6, 1.4, 12, "EFSA UL 12 mg (2023)"),
-    "biotin_ug": (40, 40, None, "estimated value"),
-    "folate_ug": (300, 300, None, "UL 1000 µg applies to synthetic folic acid only"),
-    "b12_ug": (4.0, 4.0, None, "vegan: must supplement; absorption saturates — dose per pack"),
-    "potassium_mg": (4000, 4000, None, "estimated value"),
-    "phosphorus_mg": (700, 700, None, "EFSA AI 550 mg"),
-    "magnesium_mg": (350, 300, None, "EFSA UL 250 mg applies to supplements only"),
-    "calcium_mg": (1000, 1000, 2500, ""),
-    "zinc_mg": (14, 8, 25, "phytate-dependent; see diet adjustment"),
-    "iron_mg": (11, 16, 40, "EFSA safe level 40 mg (2024); women 19–50 value — verify current DGE band"),
-    "selenium_ug": (70, 60, 255, "EFSA UL 255 µg (2023)"),
-    "iodine_ug": (200, 200, 600, "EFSA AI 150 µg; plant drinks are rarely iodised"),
-    "vitA_rae_ug": (850, 700, 3000, "UL is for preformed retinol"),
-    "vitC_mg": (110, 95, None, "no UL; GI upset above ~1 g supplemental"),
-    "vitD_ug": (20, 20, 100, "reference assumes no sun synthesis"),
-    "vitE_mg": (14, 12, 300, "estimated value"),
-    "vitK_ug": (70, 60, None, "estimated value"),
-    "sodium_mg": (1500, 1500, None, "general advice: ≤ 6 g salt; athletes add sweat losses"),
-    "nitrate_mg": (None, None, None, "performance dose ~6–8 mmol (≈ 370–500 mg) 2–3 h pre-session"),
+# Checked against dge.de on 2026-10-24 (3rd edition, printed Sept 2025); re-check when the DGE publishes revisions.
+REFERENCE = {
+    "name": "DGE/ÖGE reference values for nutrient intake, 3rd edition (2025)",
+    "population": "adults 25–<51 years, not pregnant or breastfeeding",
+    "checked": "2026-10-24",
+    "url": "https://www.dge.de/wissenschaft/referenzwerte/",
 }
+_DGE = "https://www.dge.de/wissenschaft/referenzwerte/"
+REF_DATA = {  # key: (male, female, UL, note, type, derived, page)
+    "thiamin_mg": (1.2, 1.0, None, "scales with energy intake", "recommendation", 2015, "thiamin/"),
+    "riboflavin_mg": (1.4, 1.1, None, "scales with energy intake", "recommendation", 2015, "riboflavin/"),
+    "niacin_mg": (15, 12, None, "UL applies to supplemental nicotinamide/nicotinic acid only", "recommendation", 2015, "niacin/"),
+    "pantothenic_mg": (5, 5, None, "estimated value", "estimated value", 2021, "pantothensaeure/"),
+    "b6_mg": (1.6, 1.4, 12, "EFSA UL 12 mg (2023)", "recommendation", 2019, "vitamin-b6/"),
+    "biotin_ug": (40, 40, None, "estimated value", "estimated value", 2020, "biotin/"),
+    "folate_ug": (300, 300, None, "UL 1000 µg applies to synthetic folic acid only", "recommendation", 2015, "folat/"),
+    "b12_ug": (4.0, 4.0, None, "vegan: must supplement; absorption saturates — dose per pack", "estimated value", 2018, "vitamin-b12/"),
+    "potassium_mg": (4000, 4000, None, "estimated value", "estimated value", 2016, "kalium/"),
+    "phosphorus_mg": (550, 550, None, "DGE lowered from 700 mg", "estimated value", 2024, "phosphor/"),
+    "magnesium_mg": (350, 300, None, "EFSA UL 250 mg applies to supplements only", "estimated value", 2021, "magnesium/"),
+    "calcium_mg": (1000, 1000, 2500, "", "recommendation", 2013, "calcium/"),
+    "zinc_mg": (14, 8, 25, "phytate-dependent (low/medium/high: ♂ 11/14/16, ♀ 7/8/10)", "recommendation", 2019, "zink/"),
+    "iron_mg": (11, 16, 40, "women: 16 mg while menstruating, 14 mg after menopause; EFSA safe level 40 mg (2024)",
+                "recommendation", 2023, "eisen/"),
+    "selenium_ug": (70, 60, 255, "EFSA UL 255 µg (2023)", "estimated value", 2015, "selen/"),
+    "iodine_ug": (150, 150, 600, "DGE lowered from 200 µg in 2025; plant drinks are rarely iodised", "recommendation", 2025, "jod/"),
+    "vitA_rae_ug": (850, 700, 3000, "UL is for preformed retinol", "recommendation", 2020, "vitamin-a/"),
+    "vitC_mg": (110, 95, None, "smokers 155/135 mg; no UL; GI upset above ~1 g supplemental", "recommendation", 2015, "vitamin-c/"),
+    "vitD_ug": (20, 20, 100, "assumes no sun synthesis", "estimated value", 2012, "vitamin-d/"),
+    "vitE_mg": (8, 8, 300, "DGE revised to 8 mg (RRR-α-tocopherol) for all adults", "estimated value", 2024, "vitamin-e/"),
+    "vitK_ug": (70, 60, None, "estimated value; 80/65 µg from 51 years", "estimated value", 2000, "vitamin-k/"),
+    "sodium_mg": (1500, 1500, None, "general advice: ≤ 6 g salt; athletes add sweat losses", "estimated value", 2016, "natrium/"),
+    "nitrate_mg": (None, None, None, "performance dose ~6–8 mmol (≈ 370–500 mg) 2–3 h pre-session", "performance target", None, None),
+}
+REF = {k: v[:4] for k, v in REF_DATA.items()}   # (male, female, UL, note) — kept for callers
+
+
+def ref_source(k):
+    m, f, ul, note, typ, year, page = REF_DATA[k]
+    return {"type": typ, "derived": year, "url": (_DGE + page) if page else None}
 REF_KCAL = {"male": 2400, "female": 1900}
 
 
@@ -156,6 +171,9 @@ def compute(p):
             aim = round(floor * 1.1, 1)
             why = ("high-phytate (plant-based) tier" if tier else "medium-phytate tier") + ", +10 % for sweat"
         if k == "iron_mg":
+            if sex == "female" and p.get("menstruating", True) is False:
+                floor = aim = 14
+                why = "14 mg after menopause (DGE)"
             if p["diet"] in ("vegetarian", "vegan"):
                 aim = round(floor * 1.8)
                 why = "×1.8 for non-haem iron bioavailability (IOM); check ferritin"
@@ -176,7 +194,7 @@ def compute(p):
         if k == "vitC_mg":
             aim = max(floor, 150)
             why = "150 mg covers heavy training; no benefit shown for megadoses"
-        micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why}
+        micros[k] = {"floor": floor, "aim": aim, "ul": ul, "note": why, "source": ref_source(k)}
 
     return {
         "bmr": b, "base_pal": BASE_PAL.get(p["occupation"]), "steps_kcal": round(steps),
@@ -187,6 +205,7 @@ def compute(p):
             "training": {"kcal": kcal_train, "protein_g": protein, "carb_g": carb_t, "fat_g": fat},
             "rest": {"kcal": kcal_rest, "protein_g": protein, "carb_g": carb_r, "fat_g": fat},
             "fiber_min": 30, "salt_max": 6, "micros": micros,
+            "reference": dict(REFERENCE),
         },
     }
 
@@ -205,9 +224,15 @@ def summary(p, r):
     for n in r.get("notes", []):
         L.append(f"\nNote: {n}")
     L.append(f"\nSport guideline for carbs: {lo}–{hi} g/kg on training days. Water ≈ {r['water_l']} L/day plus drinks around sessions.")
-    L += ["", "## Micronutrients (per day)", "| Nutrient | Floor | Aim | UL | Why |", "|---|---|---|---|---|"]
+    ref = t["reference"]
+    L += ["", "## Micronutrients (per day)",
+          f"Floor = {ref['name']}, {ref['population']} (checked {ref['checked']}). Aim = athlete adjustment. UL = EFSA.",
+          "", "| Nutrient | Floor | Aim | UL | Why | Source (derived) |", "|---|---|---|---|---|---|"]
     for k, v in t["micros"].items():
-        L.append(f"| {k} | {v['floor'] if v['floor'] is not None else '–'} | {v['aim'] if v['aim'] is not None else '–'} | {v['ul'] or '–'} | {v['note']} |")
+        src = v.get("source") or {}
+        cite = f"[DGE {src['derived']}]({src['url']})" if src.get("url") else "–"
+        L.append(f"| {k} | {v['floor'] if v['floor'] is not None else '–'} | {v['aim'] if v['aim'] is not None else '–'} | "
+                 f"{v['ul'] or '–'} | {v['note']} | {cite} |")
     return "\n".join(L)
 
 

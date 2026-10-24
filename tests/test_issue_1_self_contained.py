@@ -54,6 +54,48 @@ class SelfContained(unittest.TestCase):
             p = subprocess.run([sys.executable, os.path.join(SCRIPTS, "check_workbook.py"), plan, xl], capture_output=True, text=True)
             self.assertEqual(p.returncode, 0, p.stdout)
 
+    @unittest.skipUnless(shutil.which("soffice") or shutil.which("libreoffice"), "LibreOffice not installed")
+    def test_check_survives_dashed_meal_names_and_catches_wrong_totals(self):
+        """Review on PR #25: a meal named "Dinner — chili" must not end the day block early."""
+        from openpyxl import load_workbook
+        with open(os.path.join(ROOT, "assets", "example_plan.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        for d in data["days"].values():
+            for m in d["meals"]:
+                m["name"] = m["name"] + " — dashed"
+        with tempfile.TemporaryDirectory() as tmp:
+            plan, xl = os.path.join(tmp, "p.json"), os.path.join(tmp, "w.xlsx")
+            with open(plan, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            subprocess.run([sys.executable, os.path.join(SCRIPTS, "build_workbook.py"), plan, xl], check=True, capture_output=True)
+            p = subprocess.run([sys.executable, os.path.join(SCRIPTS, "recalc.py"), xl], capture_output=True, text=True, timeout=300)
+            self.assertEqual(json.loads(p.stdout)["status"], "success")
+            def check():   # openpyxl drops cached values on save — recalculate before every check
+                subprocess.run([sys.executable, os.path.join(SCRIPTS, "recalc.py"), xl], capture_output=True, timeout=300)
+                return subprocess.run([sys.executable, os.path.join(SCRIPTS, "check_workbook.py"), plan, xl],
+                                      capture_output=True, text=True)
+            p = check()
+            self.assertEqual(p.returncode, 0, p.stdout)
+            # corrupt one cached Day total on Micros: the check must now see it
+            wb = load_workbook(xl)
+            wv = load_workbook(xl, data_only=True)
+            ws, wsv = wb["Micros"], wv["Micros"]
+            r = next(r for r in range(1, ws.max_row + 1) if ws.cell(r, 1).value == "Day total")
+            ws.cell(r, 2).value = float(wsv.cell(r, 2).value or 0) * 3 + 50   # literal value replaces the formula
+            wb.save(xl)
+            p = check()
+            self.assertEqual(p.returncode, 1, p.stdout)
+            self.assertIn("Micros Mon", p.stdout)
+            # remove a day heading: the check reports the unchecked day instead of passing
+            wb = load_workbook(xl)
+            ws = wb["EAA"]
+            r = next(r for r in range(1, ws.max_row + 1) if str(ws.cell(r, 1).value).startswith("Tuesday — "))
+            ws.cell(r, 1).value = "something else"
+            wb.save(xl)
+            p = check()
+            self.assertEqual(p.returncode, 1)
+            self.assertIn("EAA: day totals checked for 6 of 7 days — missing Tue", p.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

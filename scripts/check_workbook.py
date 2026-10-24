@@ -10,6 +10,7 @@ cached values). Prints a short report; exits 1 on any mismatch beyond rounding.
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mealplan as M
+import build_workbook as B
 from openpyxl import load_workbook
 
 TOL = 0.02  # relative
@@ -39,18 +40,30 @@ def main():
                 bad.append(f"{d} {k}: workbook {v} vs engine {n[k]:.2f}")
     mic, eaa = wb["Micros"], wb["EAA"]
     micro_keys = list(M.MICRO_LABELS)
+    # a day block is its exact heading (the day sheet's title) followed by the "Meal" header row;
+    # meal names may contain " — " too, so nothing else switches the current day
+    titles = {B.day_title(plan, d): d for d in M.WEEKDAYS}
     for sheet, keys, first_col in ((mic, micro_keys, 2), (eaa, M.AAS, 3)):
-        day = None
+        day, checked = None, []
         for r in range(1, sheet.max_row + 1):
             a = sheet.cell(r, 1).value
-            if isinstance(a, str) and " — " in a:
-                day = next((d for d in M.WEEKDAYS if a.startswith(M.DAYNAMES[d])), None)
+            if a in titles and sheet.cell(r + 1, 1).value == "Meal":
+                day = titles[a]
+                continue
             if a == "Day total" and day:
                 src = res["days"][day]["total"]["aa" if sheet is eaa else "n"]
                 for j, k in enumerate(keys):
                     v = sheet.cell(r, first_col + j).value
                     if not close(v, src.get(k, 0)):
                         bad.append(f"{sheet.title} {day} {k}: workbook {v} vs engine {src.get(k, 0):.3f}")
+                checked.append(day)
+                day = None
+        if sorted(checked, key=M.WEEKDAYS.index) != M.WEEKDAYS:
+            missing = [d for d in M.WEEKDAYS if d not in checked]
+            extra = sorted({d for d in checked if checked.count(d) > 1})
+            bad.append(f"{sheet.title}: day totals checked for {len(checked)} of 7 days"
+                       + (f" — missing {', '.join(missing)}" if missing else "")
+                       + (f" — repeated {', '.join(extra)}" if extra else ""))
     if bad:
         print(f"{len(bad)} mismatches:\n" + "\n".join(bad[:40]))
         sys.exit(1)

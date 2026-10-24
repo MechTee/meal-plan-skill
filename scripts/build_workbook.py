@@ -120,14 +120,21 @@ def build_ingredients(wb, plan):
     return rows
 
 
+def day_title(plan, day):
+    """Sheet title of a template day, e.g. "Wednesday — Training (legs)" — also the day heading on Micros/EAA."""
+    d = plan["days"][day]
+    title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
+    if d.get("label") and d["label"] != M.DAYNAMES[day]:
+        title += d["label"][len(M.DAYNAMES[day]):]
+    return title
+
+
 def build_day(wb, plan, day):
     d = plan["days"][day]
     ws = wb.create_sheet(day)
     T = plan.get("targets", {})
     t = T.get(d.get("type", "training"), {})
-    title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
-    if d.get("label") and d["label"] != M.DAYNAMES[day]:
-        title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}{d['label'][len(M.DAYNAMES[day]):]}"
+    title = day_title(plan, day)
     put(ws, "A1", title, bold=True, size=13)
     free = T.get("free_kcal")
     put(ws, "A2", f"Target: {t.get('kcal', 0):,} kcal planned" + (f" (+{free} free)" if free else "") +

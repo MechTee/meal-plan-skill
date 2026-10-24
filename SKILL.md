@@ -92,10 +92,16 @@ Then interview topic by topic at the chosen depth. The question bank, per topic 
   athlete can always answer in their own words.
   Pre-fill known answers as the first option, marked "(current)".
 - Never ask what you can calculate or already know. Group related questions in one call.
-- Safety screens are asked whatever depth was chosen (age band, health conditions or medication
-  that change protein/caffeine/salt advice, drug-tested sport, history of disordered eating —
-  asked gently and once). See "Safety" below for what each answer changes.
-- If the athlete is not there to answer (scheduled run), take the defaults, say which, and continue.
+- Safety screens are asked whatever depth was chosen (food allergies and intolerances, age band,
+  health conditions or medication that change protein/caffeine/salt advice, drug-tested sport,
+  history of disordered eating — asked gently and once). See "Safety" below for what each answer
+  changes.
+- **Allergy status is never assumed.** Record it in `plan.json` as `meta.allergies.status`:
+  `none` (the athlete said so), `known` (with the list), or `unknown` (skipped, unsure, or no answer).
+  Skipping the Preferences topic or running unattended does not make it `none`.
+- If the athlete is not there to answer (scheduled run), take the defaults, say which, and continue
+  — with allergy status `unknown`, stated at the top of the hand-over as something to confirm before
+  cooking or shopping.
 
 Write the answers into `profile.json` (fields in `scripts/targets.py` docstring) as you go.
 
@@ -140,6 +146,10 @@ Design rules that come from real use:
   post-workout within ~2 h. Build a timing variant per session time the athlete uses.
 - **Supplements count toward totals.** Put food in `days`, and list supplements as
   `targets.micros.<key>.supplement` (daily average — a 400 µg tablet every third day is 133 µg).
+- **Allergens are binding.** Tag every ingredient with `allergens` (and `may_contain` for trace
+  warnings). `mealplan.py check` flags any ingredient that contains a listed allergen, any ingredient
+  without allergen data while the athlete has allergies, and an `unknown` status. Every later change
+  (swaps, substitutions, product hardening) must pass this check again.
 - **Metric units**, local product names, and the athlete's own words for meals.
 
 Run the check after every change:
@@ -169,6 +179,8 @@ plan stops being approximate. Follow `references/sourcing.md`:
 - Label values (per 100 g/ml) for the actual products at their shops; composition databases
   (USDA FDC, BLS, CoFID, CIQUAL, NEVO…) for micros and amino acids the label lacks. Put the product
   and database id in `source`. If the athlete has receipts, photos or label text, those win.
+- Allergens from the actual product label, including "may contain" statements — a different brand
+  of the same food can differ (curry pastes with shrimp, stock powders with celery, oats with gluten).
 - Pack size, price, store and link per ingredient (`shop`), shelf life for fresh items.
 - Research in parallel with subagents when the host has them and there are many products; tell them
   not to invent prices or URLs and to return "not found" instead.
@@ -234,6 +246,11 @@ republish to the same page URLs if the host published them. Never patch numbers 
 drift apart.
 
 ## Safety
+
+- **Allergies:** a listed allergen never appears in a recipe, product or substitution; when status is
+  `unknown`, every output says so prominently and asks the athlete to confirm before use (the page
+  renderers, the shopping markdown and the workbook add this banner from `meta.allergies` themselves). Labels
+  change — tell the athlete to check the pack each time they buy.
 
 - Not a substitute for a dietitian or doctor; say so once, plainly, when health conditions,
   medication, pregnancy or competition weight-making come up, and keep helping within that.

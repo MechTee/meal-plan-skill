@@ -63,7 +63,8 @@ def recipe_data(plan, comp, rk):
             "steps": [list(s) if isinstance(s, (list, tuple)) else [s, None] for s in r.get("steps", [])],
             "notes": r.get("notes", []), "variants": comp["recipes"][rk], "bw": meta.get("bw_kg", 80),
             "unit": "variant", "refs": refs(plan), "refLabel": meta.get("ref_label"),
-            "sources": meta.get("sources"), "noProtein": r.get("no_protein_note"), "smallNote": r.get("small_protein_note")}
+            "sources": meta.get("sources"), "noProtein": r.get("no_protein_note"), "smallNote": r.get("small_protein_note"),
+            "alerts": M.allergy_alerts(plan)}
 
 
 def cookday_pages(plan):
@@ -93,7 +94,8 @@ def cookday_pages(plan):
                      "variants": {"Whole session": acc.export()}, "bw": plan.get("meta", {}).get("bw_kg", 80),
                      "unit": "session", "refs": refs(plan), "refLabel": plan.get("meta", {}).get("ref_label"),
                      "sources": plan.get("meta", {}).get("sources"),
-                     "smallNote": "Totals for the whole session — divide by the portions to compare with a meal."}
+                     "smallNote": "Totals for the whole session — divide by the portions to compare with a meal.",
+                     "alerts": M.allergy_alerts(plan)}
     return list(seen.values())
 
 
@@ -117,6 +119,7 @@ def shopping_data(plan, comp):
             "cycleWeeks": M.cycle_weeks(plan), "runs": sh["runs"],
             "costs": {"weekly": sh["weekly_cost"], "cycle": sh["cycle_cost"], "firstTill": sh["first_cycle_till_cost"]},
             "recipes": [{"title": plan["recipes"][rk]["title"], "line": recipe_line(plan, rk)} for rk in plan["recipes"]],
+            "alerts": M.allergy_alerts(plan),
             "notes": meta.get("shopping_notes", []) + (["Prices missing for: " + ", ".join(sh["missing_price"])] if sh["missing_price"] else [])}
 
 
@@ -128,6 +131,8 @@ def shopping_markdown(plan, comp):
     out = [f"# {meta.get('shopping_title', 'Shopping list')} — {W}-week cycle", ""]
     if meta.get("name"):
         out += [f"Plan: {meta['name']}", ""]
+    for a in M.allergy_alerts(plan):
+        out += [("> **⚠ Allergy:** " if a["level"] == "warn" else "> **Allergy:** ") + a["text"], ""]
     if meta.get("changelog"):
         out += ["*" + " ".join(meta["changelog"]) + "*", ""]
     if inv["per_recipe"]:

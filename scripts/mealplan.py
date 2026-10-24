@@ -65,10 +65,21 @@ def _item(it):
     return it[0], float(it[1]), it[2], it[3]
 
 
+ALLERGY_STATUSES = ("none", "known", "unknown")
+
+
 def validate(plan):
     errs = []
     ing = plan.get("ingredients", {})
     rec = plan.get("recipes", {})
+    al = plan.get("meta", {}).get("allergies")
+    if not isinstance(al, dict) or al.get("status") not in ALLERGY_STATUSES:
+        errs.append('meta.allergies.status is required: "none", "known" or "unknown" '
+                    '(an unanswered allergy question is "unknown", never "none")')
+    elif al["status"] == "known" and not al.get("items"):
+        errs.append('meta.allergies.status is "known" but meta.allergies.items is empty')
+    elif al["status"] == "none" and al.get("items"):
+        errs.append('meta.allergies.status is "none" but items are listed — use "known"')
     names = set()
     for k, v in ing.items():
         if "name" not in v:
@@ -514,9 +525,86 @@ def compute(plan):
     return res
 
 
+def used_ingredients(plan):
+    """Ingredient keys that are actually eaten or cooked in the cycle (template, overrides, sessions)."""
+    used = set()
+    W = cycle_weeks(plan)
+    for w in range(1, W + 1):
+        for day in WEEKDAYS:
+            for m in day_def(plan, w, day).get("meals", []):
+                for p in m.get("parts", []):
+                    for k, _, _, _ in part_lines(plan, p):
+                        used.add(k)
+    for s in sessions(plan):
+        for rk in s["cook"]:
+            for it in plan["recipes"][rk]["items"]:
+                used.add(_item(it)[0])
+    return used
+
+
+def scanned_ingredients(plan):
+    """Everything the allergy check must cover: every ingredient eaten or cooked in the cycle plus every
+    ingredient of every recipe in plan.recipes — render_pages publishes all of them (recipe pages and the
+    shopping list's quick reference), including recipes no longer on the schedule."""
+    keys = used_ingredients(plan)
+    for r in plan.get("recipes", {}).values():
+        for it in r.get("items", []):
+            keys.add(_item(it)[0])
+    return keys
+
+
+def allergy_alerts(plan):
+    """Allergy lines every generated output shows prominently (pages, shopping lists, workbook).
+    [{"level": "warn"|"info", "text": …}] — warn while the status is unknown or the check has findings."""
+    a = allergy_check(plan)
+    if a["status"] == "unknown":
+        return [{"level": "warn", "text": "Allergies and intolerances NOT CONFIRMED — check every ingredient "
+                                          "with the athlete before cooking or buying anything on this page."}]
+    out = [{"level": "warn", "text": f} for f in a["flags"]]
+    if a["status"] == "known":
+        out.append({"level": "info", "text": "Planned free of: " + ", ".join(a["items"]) +
+                    ". Check the label of every pack you buy — recipes and factories change."})
+    return out
+
+
+def allergy_check(plan):
+    """Allergy findings. Every flag here is blocking: resolve before the plan is approved or cooked."""
+    al = plan.get("meta", {}).get("allergies") or {"status": "unknown"}
+    out = {"status": al.get("status", "unknown"), "items": [a.lower() for a in al.get("items", [])],
+           "conflicts": [], "traces": [], "unchecked": [], "flags": []}
+    if out["status"] == "unknown":
+        out["flags"].append("ALLERGY STATUS UNKNOWN — confirm allergies and intolerances with the athlete "
+                            "before anything is cooked or bought")
+        return out
+    if out["status"] == "none":
+        return out
+    want = set(out["items"])
+    traces_matter = al.get("traces_matter", True)
+    for k in sorted(scanned_ingredients(plan)):
+        ing = plan["ingredients"][k]
+        if "allergens" not in ing:
+            out["unchecked"].append(ing["name"])
+            continue
+        hit = want & {a.lower() for a in ing.get("allergens", [])}
+        if hit:
+            out["conflicts"].append({"ingredient": ing["name"], "allergens": sorted(hit)})
+        trace = want & {a.lower() for a in ing.get("may_contain", [])}
+        if trace and traces_matter:
+            out["traces"].append({"ingredient": ing["name"], "allergens": sorted(trace)})
+    for c in out["conflicts"]:
+        out["flags"].append(f"ALLERGEN CONFLICT: {c['ingredient']} contains {', '.join(c['allergens'])}")
+    for c in out["traces"]:
+        out["flags"].append(f"ALLERGEN TRACES: {c['ingredient']} may contain {', '.join(c['allergens'])}")
+    if out["unchecked"]:
+        out["flags"].append("ALLERGENS NOT CHECKED for: " + ", ".join(out["unchecked"]) +
+                            " — add `allergens` from the product label")
+    return out
+
+
 def checks(plan, res):
     T = plan.get("targets", {})
-    out = {"days": [], "micros": [], "flags": []}
+    alg = allergy_check(plan)
+    out = {"days": [], "micros": [], "flags": list(alg["flags"]), "allergies": alg}
     for day in WEEKDAYS:
         n = res["days"][day]["total"]["n"]
         t = T.get(res["days"][day]["type"], {})
@@ -578,6 +666,14 @@ def report(plan, res):
     L = []
     m = plan.get("meta", {})
     L.append(f"# Plan check — {m.get('name', 'meal plan')}\n")
+    alg = res["checks"]["allergies"]
+    label = {"none": "none (confirmed by the athlete)", "unknown": "UNKNOWN — confirm before cooking or shopping",
+             "known": "known: " + ", ".join(alg["items"])}[alg["status"]]
+    L.append(f"**Allergies:** {label}")
+    if alg["status"] == "known":
+        L.append(f"Conflicts: {len(alg['conflicts'])} · trace warnings: {len(alg['traces'])} · "
+                 f"ingredients without allergen data: {len(alg['unchecked'])}")
+    L.append("")
     L.append("## Days vs targets\n")
     L.append("| Day | Type | kcal | Δ | Protein g | Δ | Carbs g | Fat g | Fibre g | Salt g |")
     L.append("|---|---|---|---|---|---|---|---|---|---|")

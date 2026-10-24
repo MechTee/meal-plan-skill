@@ -28,7 +28,10 @@ Example call:
 
 ## Safety screen (always, whatever depth)
 
-One call, phrased lightly:
+One call, phrased lightly. These are asked even when every topic is skipped and even when the plan
+is otherwise built from defaults:
+- Food allergies or intolerances: none / yes — I'll list them / not sure. "Not sure" or no answer is
+  recorded as `unknown`, never as `none`.
 - Age band: under 18 / 18–39 / 40–59 / 60+
 - Anything a plan must respect: none / a health condition or medication / pregnant or breastfeeding / prefer to tell in text
 - Do you compete in a drug-tested sport? yes / no
@@ -96,7 +99,8 @@ Defaults: 4 × 60 min resistance, evening, 7 000 steps, desk job, normal sweat.
 
 Quick
 - Pattern: omnivore / pescatarian / vegetarian (dairy? eggs?) / vegan
-- Allergies or intolerances (text)
+- (Allergies are already covered by the safety screen; here, ask how strict: traces/"may contain"
+  matter or not, and any intolerance that is dose-dependent, e.g. lactose)
 
 Standard
 - Foods they dislike or will not cook; foods they want daily
@@ -111,7 +115,8 @@ Deep
 - Willing to eat the same breakfast daily? Same lunch rotation?
 - Supplements already taken (dose, frequency) — they count toward micro totals and ULs
 
-Defaults: omnivore, 5 feedings, shakes OK.
+Defaults: omnivore, 5 feedings, shakes OK. Allergy status is never defaulted — it comes from the
+safety screen (`none`, the listed allergens, or `unknown`).
 
 ## 5 · Cooking  → recipe kinds, cycle.sessions, meta.freezer_portions
 

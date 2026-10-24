@@ -27,6 +27,7 @@ and lists every unknown key reference.
 | name | plan name shown on pages |
 | athlete, bw_kg | body weight drives protein/kg and per-feeding targets on pages |
 | currency, locale, country | `"EUR"`, `"de-DE"` — formatting on the shopping page |
+| allergies | **required.** `{"status": "none" \| "known" \| "unknown", "items": ["peanuts", "sesame"], "traces_matter": true, "note": "…"}`. `known` needs at least one item; unanswered = `unknown`, never `none` |
 | freezer_portions | freezer capacity in containers; the check flags the peak above it |
 | workbook_notes | list of short notes shown under the Week summary title (e.g. week-2/4 swaps) |
 | ref_label | footer text for the micro bars, e.g. "Bars show % of your daily aim (D-A-CH + athlete adjustments)." |
@@ -62,6 +63,8 @@ daily average and is added to food in checks and in the workbook ("Supplements /
   "aa": {"his": 1.27, "ile": 2.2, "leu": 3.82, "lys": 3.04, "met": 0.64, "cys": 0.64,
          "phe": 2.45, "tyr": 1.76, "thr": 1.86, "trp": 0.64, "val": 2.3},   // g per 100 g
   "digestibility": 0.9,
+  "allergens": ["soy"],                  // what the product contains (see list below); [] = none
+  "may_contain": [],                     // trace warnings from the label
   "piece_g": null,                       // grams per piece when bought by the piece
   "shop": {"buy": "stock", "pack_size": 1000, "pack_unit": "g", "pack_label": "Vantastic Soja Schnetzel 1 kg",
            "price": 8.99, "store": "online", "link": "https://…", "shelf_days": null, "carry": true,
@@ -77,6 +80,11 @@ Leave a key **out** (or `null`) when unknown — it is tracked as missing data a
 pages; write `0` only when the true value is zero. `sodium_mg` defaults to `salt_g × 400`.
 Carbs are net carbs (EU-label style); fibre separate. For US-label data subtract fibre from total
 carbohydrate.
+
+Allergen names: use the EU's 14 regulated allergens — `gluten`, `crustaceans`, `eggs`, `fish`,
+`peanuts`, `soy`, `milk`, `nuts` (tree nuts), `celery`, `mustard`, `sesame`, `sulphites`, `lupin`,
+`molluscs` — plus anything the athlete names (e.g. `kiwi`, `lactose`). Lower case. An ingredient with
+no `allergens` key is "not checked", which the check reports when the athlete has allergies.
 
 `shop.buy`:
 - `stock` — bought once per cycle on the stock-up run (dry goods, tins, frozen, powders, spices)

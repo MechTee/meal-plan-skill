@@ -514,6 +514,41 @@ def compute(plan):
     return res
 
 
+INCOMPLETE = 0.01  # share of a day's food mass without a value above which a total is only a lower bound
+
+
+def micro_status(avg, peak, lim, missing_share):
+    """Status of one nutrient. Missing values were summed as 0, so with incomplete data the known total
+    is a LOWER BOUND: it can show a minimum is met, or that an upper limit is exceeded, but never that
+    intake stays below an upper limit."""
+    floor, aim, ul = lim.get("floor"), lim.get("aim"), lim.get("ul")
+    complete = missing_share <= INCOMPLETE
+    if floor and avg < floor:
+        min_status = "below floor" if complete else "unverified — known part below floor"
+    elif aim and avg < aim:
+        min_status = "below aim" if complete else "unverified — known part below aim"
+    elif floor or aim:
+        min_status = "met" if complete else "met (known part alone)"
+    else:
+        min_status = "n/a"
+    if not ul:
+        ul_status = "n/a"
+    elif peak > ul:
+        ul_status = "ABOVE UL"
+    else:
+        ul_status = "within UL" if complete else "UL unverified"
+    if ul_status == "ABOVE UL":
+        status = "ABOVE UL" + ("" if complete else " (known part alone)")
+    elif complete:
+        status = {"below floor": "below floor", "below aim": "below aim"}.get(min_status, "ok")
+    else:
+        parts = [min_status] + ([ul_status] if ul_status == "UL unverified" else [])
+        status = "data incomplete: " + "; ".join(parts)
+    flag = status != "ok" and not (not complete and min_status == "met (known part alone)" and ul_status == "n/a")
+    return {"complete": complete, "lower_bound": not complete, "min_status": min_status, "ul_status": ul_status,
+            "status": status, "flag": flag}
+
+
 def checks(plan, res):
     T = plan.get("targets", {})
     out = {"days": [], "micros": [], "flags": []}
@@ -532,7 +567,12 @@ def checks(plan, res):
         if "protein_g" in t and n["protein_g"] < t["protein_g"] - 10:
             out["flags"].append(f"{day}: protein {n['protein_g']:.0f} g is >10 g under target {t['protein_g']} g")
         if T.get("fiber_min") and n["fiber_g"] < T["fiber_min"]:
-            out["flags"].append(f"{day}: fibre {n['fiber_g']:.0f} g under {T['fiber_min']} g")
+            gap = res["days"][day]["total"]["mshare"].get("fiber_g", 0)
+            if gap > INCOMPLETE:
+                out["flags"].append(f"{day}: fibre ≥ {n['fiber_g']:.0f} g known, under {T['fiber_min']} g — "
+                                    f"{gap:.0%} of the food has no fibre value, so the true total may be higher")
+            else:
+                out["flags"].append(f"{day}: fibre {n['fiber_g']:.0f} g under {T['fiber_min']} g")
         if T.get("salt_max") and n["salt_g"] > T["salt_max"] * 1.5:
             out["flags"].append(f"{day}: salt {n['salt_g']:.1f} g (pre-workout/intra salt may justify it — check)")
         sc = res["days"][day]["total"]["score"]
@@ -547,20 +587,14 @@ def checks(plan, res):
                "floor": lim.get("floor"), "aim": lim.get("aim"), "ul": lim.get("ul"),
                "supplement": lim.get("supplement", 0), "missing_share": miss}
         tot_avg = avg + (lim.get("supplement") or 0)
+        tot_max = max(vals) + (lim.get("supplement") or 0)
         row["avg_incl_supp"] = round(tot_avg, 2)
-        st = "ok"
-        if lim.get("floor") and tot_avg < lim["floor"]:
-            st = "below floor"
-        elif lim.get("aim") and tot_avg < lim["aim"]:
-            st = "below aim"
-        if lim.get("ul") and (max(vals) + (lim.get("supplement") or 0)) > lim["ul"]:
-            st = "ABOVE UL"
-        if miss > 0.1 and st != "ok":
-            st += " (data incomplete)"
-        row["status"] = st
+        row.update(micro_status(tot_avg, tot_max, lim, miss))
         out["micros"].append(row)
-        if st != "ok":
-            out["flags"].append(f"micro {k}: {st} — week avg {tot_avg:.1f} (floor {lim.get('floor')}, aim {lim.get('aim')}, UL {lim.get('ul')})")
+        if row["flag"]:
+            out["flags"].append(f"micro {k}: {row['status']} — week avg {'≥ ' if not row['complete'] else ''}{tot_avg:.1f} "
+                                f"(floor {lim.get('floor')}, aim {lim.get('aim')}, UL {lim.get('ul')}"
+                                + (f"; {miss:.0%} of the food has no value" if not row["complete"] else "") + ")")
     inv = res["inventory"]
     for s in inv["steady_shortfalls"]:
         out["flags"].append(f"batch shortfall: {s['recipe']} short {s['short']} portions in week {s['week']} {s['day']}")
@@ -586,11 +620,15 @@ def report(plan, res):
                  f"{r.get('protein_g_delta', 0):+.0f} | {r['carb_g']:.0f} | {r['fat_g']:.0f} | {r['fiber_g']:.0f} | {r['salt_g']:.1f} |")
     if res["checks"]["micros"]:
         L.append("\n## Micronutrients (week average, food + listed supplements)\n")
-        L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Status |")
-        L.append("|---|---|---|---|---|---|---|")
+        L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Food without data | Status |")
+        L.append("|---|---|---|---|---|---|---|---|")
         for r in res["checks"]["micros"]:
             lab = MICRO_LABELS.get(r["key"], (r["key"], ""))
-            L.append(f"| {lab[0]} ({lab[1]}) | {r['avg']:.1f} | {r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | {r['ul'] or '–'} | {r['status']} |")
+            ge = "≥ " if r["lower_bound"] else ""
+            L.append(f"| {lab[0]} ({lab[1]}) | {ge}{r['avg']:.1f} | {ge}{r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | "
+                     f"{r['ul'] or '–'} | {r['missing_share']:.0%} | {r['status']} |")
+        L.append("\n“≥” = some food has no value for this nutrient, so the true intake is at least this much. "
+                 "An upper limit can only be confirmed once those values are filled in.")
     inv = res["inventory"]
     if inv["per_recipe"]:
         L.append("\n## Batch portions per cycle (steady state)\n")

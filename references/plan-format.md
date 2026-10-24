@@ -73,8 +73,11 @@ Nutrient keys (`per100`): `kcal protein_g fat_g satfat_g carb_g sugar_g fiber_g 
 `thiamin_mg riboflavin_mg niacin_mg pantothenic_mg b6_mg biotin_ug folate_ug b12_ug potassium_mg
 phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA_rae_ug vitC_mg
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
-Leave a key **out** (or `null`) when unknown — it is tracked as missing data and shown as "≥" on the
-pages; write `0` only when the true value is zero. `sodium_mg` defaults to `salt_g × 400`.
+Leave a key **out** (or `null`) when unknown — it is tracked as missing data; write `0` only when the
+true value is zero. A total with missing values is a **lower bound**: the check, report, workbook
+("Food without a value" and "Status" rows) and pages show it with "≥". A lower bound can show that a
+minimum is met or an upper limit is exceeded, but never that intake stays *below* an upper limit —
+that stays "UL unverified" until the values are filled in. `sodium_mg` defaults to `salt_g × 400`.
 Carbs are net carbs (EU-label style); fibre separate. For US-label data subtract fibre from total
 carbohydrate.
 

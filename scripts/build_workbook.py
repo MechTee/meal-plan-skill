@@ -10,7 +10,7 @@ calculations are black. Every nutrient number is a live formula back to the Ingr
 so editing a gram amount or a label value recalculates days, micros, amino acids and the week.
 Run the xlsx skill's recalc.py on the output afterwards and fix anything it reports.
 """
-import sys, json
+import re, sys, json
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter as L
@@ -57,6 +57,22 @@ ING_LAST = 500
 MIC0 = 11                      # K
 AA0 = MIC0 + len(MICRO_KEYS)   # first AA column
 DIG = AA0 + len(AA_KEYS)
+IDC = DIG + 1                  # ingredient ID: the literal lookup key used by every formula
+
+
+def ingredient_ids(plan):
+    """Stable, literal lookup keys: derived from the plan's ingredient keys, restricted to A–Z, 0–9 and "_"
+    so spreadsheet matching can't treat them as wildcards (* ? ~) or confuse them by letter case.
+    Display names stay free text and are never used for matching."""
+    ids, taken = {}, set()
+    for key in plan["ingredients"]:
+        base = "ING_" + (re.sub(r"[^A-Za-z0-9]+", "_", key).strip("_").upper() or "X")
+        cand, n = base, 2
+        while cand in taken:
+            cand, n = f"{base}_{n}", n + 1
+        taken.add(cand)
+        ids[key] = cand
+    return ids
 
 
 def ing_rng(col):
@@ -77,7 +93,7 @@ def build_ingredients(wb, plan):
     put(ws, L(AA0) + "4", "Essential amino acids, g per 100 g — fold/unfold above the column letters.", color=GREY, italic=True)
     heads = ["Ingredient"] + [h for _, h, _ in MAC_COLS] + ["Source / product matched"] + \
             [f"{M.MICRO_LABELS[k][0]} ({M.MICRO_LABELS[k][1]})" for k in MICRO_KEYS] + \
-            [f"{M.AA_LABELS[a]} (g)" for a in AA_KEYS] + ["Digestibility (0–1)"]
+            [f"{M.AA_LABELS[a]} (g)" for a in AA_KEYS] + ["Digestibility (0–1)", "ID (lookup key)"]
     for i, h in enumerate(heads, 1):
         c = put(ws, f"{L(i)}5", h, bold=True, fill=HDR_FILL, wrap=True)
     r = ING_FIRST
@@ -105,12 +121,14 @@ def build_ingredients(wb, plan):
                 put(ws, f"{L(AA0 + j)}{r}", aa[a], color=BLUE, fmt="0.000")
         if "digestibility" in ing:
             put(ws, f"{L(DIG)}{r}", ing["digestibility"], color=BLUE, fmt="0.00")
+        put(ws, f"{L(IDC)}{r}", IDS[key], color=BLUE)
         rows[key] = r
         r += 1
     ws.column_dimensions["A"].width = 34
     for i in range(2, 10):
         ws.column_dimensions[L(i)].width = 11
     ws.column_dimensions["J"].width = 44
+    ws.column_dimensions[L(IDC)].width = 22
     for i in range(MIC0, DIG + 1):
         ws.column_dimensions[L(i)].width = 12
     ws.column_dimensions.group(L(MIC0), L(AA0 - 1), hidden=False, outline_level=1)
@@ -132,7 +150,7 @@ def build_day(wb, plan, day):
     free = T.get("free_kcal")
     put(ws, "A2", f"Target: {t.get('kcal', 0):,} kcal planned" + (f" (+{free} free)" if free else "") +
         ". Grams in blue are editable; nutrients come from the Ingredients sheet.", color=GREY, italic=True)
-    heads = ["Meal / ingredient", "Sub-group", "Amount (g/ml)", "Ingredient (lookup)"] + [h for _, h, _ in MAC_COLS]
+    heads = ["Meal / ingredient", "Sub-group", "Amount (g/ml)", "Ingredient ID (lookup)"] + [h for _, h, _ in MAC_COLS]
     for i, h in enumerate(heads, 1):
         put(ws, f"{L(i)}4", h, bold=True, fill=HDR_FILL, wrap=True)
     r = 5
@@ -151,10 +169,10 @@ def build_day(wb, plan, day):
                 put(ws, f"A{r}", "   " + ing["name"])
                 put(ws, f"B{r}", sub, color=GREY)
                 put(ws, f"C{r}", round(g, 2), color=BLUE, fmt="0.#")
-                put(ws, f"D{r}", ing["name"], color=GREEN)
+                put(ws, f"D{r}", IDS[k], color=GREEN)
                 for j, (_, _, fmt) in enumerate(MAC_COLS):
                     col = L(5 + j)
-                    put(ws, f"{col}{r}", f"=IFERROR($C{r}*N(VLOOKUP($D{r},Ingredients!$A${ING_FIRST}:$I${ING_LAST},{2 + j},FALSE))/100,0)", fmt=fmt)
+                    put(ws, f"{col}{r}", f"=IFERROR($C{r}*N(INDEX({ing_rng(2 + j)},MATCH($D{r},{ing_rng(IDC)},0)))/100,0)", fmt=fmt)
                 r += 1
         last = r - 1
         put(ws, f"A{r}", f"Subtotal — {m['name']}", bold=True)
@@ -223,7 +241,7 @@ def build_micros(wb, plan, days):
             sh = dinfo["sheet"]
             for j, k in enumerate(MICRO_KEYS):
                 put(ws, f"{L(2 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.0#")
             r += 1
         put(ws, f"A{r}", "Day total", bold=True, fill=TOT_FILL)
@@ -261,7 +279,7 @@ def build_eaa(wb, plan, days):
             put(ws, f"B{r}", f"={sh}!F{m['sub']}", color=GREEN, fmt="0.0")
             for j, a in enumerate(AA_KEYS):
                 put(ws, f"{L(3 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(1)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.00")
             put(ws, f"N{r}", f"=SUM(C{r}:M{r})", fmt="0.0")
             put(ws, f"O{r}", f'=IF(B{r}<10,"–",IF(E{r}>=2.5,"yes","no"))')
@@ -406,7 +424,12 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     ws.freeze_panes = "B5"
 
 
+IDS = {}
+
+
 def build(plan, out):
+    global IDS
+    IDS = ingredient_ids(plan)
     wb = Workbook()
     wb.active.title = "Week summary"
     wb.create_sheet("Micros")  # placeholders keep the sheet order: Week summary, Micros, EAA, Ingredients, Mon..Sun

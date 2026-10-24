@@ -45,6 +45,12 @@ Sheets, in order — this matches the athlete's established workbook and must st
 | Ingredients | per 100 g/ml: macros, Source, 23 micros (outline-grouped), 11 amino acids (grouped), digestibility |
 | Mon … Sun | "Meal / ingredient · Sub-group · Amount (g/ml) · Ingredient (lookup) · kcal · Protein · Fat · sat · unsat · Carbs · Fiber · Salt"; meal header rows, subtotals, day total, target, Δ, energy split, protein per kg |
 
+Lookups: every formula matches ingredients by the **ID** column on the Ingredients sheet (e.g.
+`ING_SOY_CHUNKS`, derived from the plan key, letters/digits/underscore only) — never by the display
+name, because spreadsheet matching ignores case and treats `*`, `?`, `~` as wildcards. Day sheets
+show the name in column A and the ID in "Ingredient ID (lookup)"; to swap an ingredient, paste
+another ID there.
+
 Conventions: Arial; blue = inputs, green = cross-sheet links, black = formulas; header fill
 `#E8ECE6`; batch portions are expanded into scaled ingredient rows with the batch named in
 "Sub-group" so every gram is visible and editable.

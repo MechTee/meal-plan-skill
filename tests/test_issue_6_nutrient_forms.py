@@ -98,6 +98,42 @@ class SupplementalFolateIncludesMethylfolate(unittest.TestCase):
         _, r = row(p, "folate_ug")
         self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
 
+    def test_legacy_folic_acid_value_is_only_a_known_part(self):
+        """PR #48 rereview [P1]: an old record saying "no folic acid" must not certify a fortified food that may
+        carry added 5-MTHF — it used to give "within UL", peak 0."""
+        p = with_test_food({"folate_ug": 2500, "folic_acid_ug": 0}, origin="plant")
+        p["ingredients"]["testfood"]["fortified_with"] = ["folate_ug"]
+        _, r = row(p, "folate_ug")
+        lim = next(x for x in r["limits"] if x["basis"] == "folate_added_ug")
+        self.assertEqual(lim["status"], "unresolved", r["status"])
+        self.assertIn("UL unresolved", r["status"])
+
+    def test_legacy_folic_acid_alone_above_limit_is_still_flagged(self):
+        p = with_test_food({"folate_ug": 2500, "folic_acid_ug": 2000}, origin="plant")
+        p["ingredients"]["testfood"]["fortified_with"] = ["folate_ug"]
+        _, r = row(p, "folate_ug")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
+
+    def test_legacy_folic_acid_value_counts_toward_the_supplement(self):
+        # 600 µg folic acid known in food + 600 µg supplement = 1,200 µg: above, despite the unknown 5-MTHF
+        p = with_test_food({"folate_ug": 2500, "folic_acid_ug": 600}, origin="plant")
+        p["ingredients"]["testfood"]["fortified_with"] = ["folate_ug"]
+        p["targets"]["micros"]["folate_ug"]["supplement"] = 600
+        _, r = row(p, "folate_ug")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
+
+    def test_legacy_zero_in_unfortified_food_is_complete(self):
+        _, r = row(with_test_food({"folate_ug": 2500, "folic_acid_ug": 0}, origin="plant"), "folate_ug")
+        lim = next(x for x in r["limits"] if x["basis"] == "folate_added_ug")
+        self.assertEqual(lim["status"], "ok", r["status"])
+
+    def test_explicit_combined_value_resolves_the_limit(self):
+        p = with_test_food({"folate_ug": 2500, "folic_acid_ug": 0, "folate_added_ug": 0}, origin="plant")
+        p["ingredients"]["testfood"]["fortified_with"] = ["folate_ug"]
+        _, r = row(p, "folate_ug")
+        lim = next(x for x in r["limits"] if x["basis"] == "folate_added_ug")
+        self.assertEqual(lim["status"], "ok", r["status"])
+
     def test_natural_food_folate_does_not_count(self):
         _, r = row(with_test_food({"folate_ug": 2500}, origin="plant"), "folate_ug")
         self.assertFalse(r["status"].startswith("ABOVE UL"), r["status"])

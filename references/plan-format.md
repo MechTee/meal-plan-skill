@@ -92,7 +92,8 @@ phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
 Nutrient **forms** with their own upper limits (optional per100 keys): `retinol_ug` (preformed
 vitamin A, part of `vitA_rae_ug`), `folate_added_ug` (folic acid + added 5-MTHF from fortification, part of `folate_ug`; the older key
-`folic_acid_ug` is read as this),
+`folic_acid_ug` counts as a known part of it only — in a fortified food the 5-MTHF share stays unknown,
+so give `folate_added_ug` to resolve the limit),
 `magnesium_added_mg` (added/supplemental magnesium), `nicotinamide_mg`, `nicotinic_acid_mg` (part of
 `niacin_mg`). When a form is not given it is 0 where that is certain — the parent nutrient is 0;
 retinol in a `plant`, `fungal` or `other` ingredient; added folate, added magnesium and the niacin forms in a food not

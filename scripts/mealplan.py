@@ -38,7 +38,8 @@ FORM_KEYS = list(FORMS)
 # supplement forms that follow from the nutrient itself: every magnesium supplement is supplemental
 # magnesium, and every folate supplement (folic acid or a 5-MTHF salt) is supplemental folate
 SUPPLEMENT_IS_FORM = {"magnesium_added_mg", "folate_added_ug"}
-# older plan files: `folic_acid_ug` was the folate limit's basis and per100 key — read it as the combined form
+# older plan files: `folic_acid_ug` was the folate limit's basis (read as the combined form) and a per100 key
+# (read as a known PART of added folate only — it cannot rule out added 5-MTHF; see form_amount)
 LEGACY_FORMS = {"folic_acid_ug": "folate_added_ug"}
 AAS = ["his", "ile", "leu", "lys", "met", "cys", "phe", "tyr", "thr", "trp", "val"]
 # FAO 2013 scoring pattern, older child/adolescent/adult, mg per g protein
@@ -160,20 +161,40 @@ def ing_nutrients(ingr, grams):
         else:
             out[k] = v * grams / 100.0
     for fk in FORM_KEYS:
-        v = form_value(ingr, fk)
-        if v is None:
-            out[fk] = 0.0
-            missing[fk] = grams
-        else:
-            out[fk] = v * grams / 100.0
+        known, complete = form_amount(ingr, fk)
+        out[fk] = known * grams / 100.0      # a known part counts even when the rest is unknown …
+        if not complete:
+            missing[fk] = grams                # … but the limit stays unresolved unless that part alone exceeds it
     aa = ingr.get("aa") or {}
     aa_out = {a: (aa.get(a) or 0.0) * grams / 100.0 for a in AAS}
     dig = ingr.get("digestibility", 0.85)
     return out, missing, aa_out, dig
 
 
+def form_amount(ingr, fk):
+    """(known per-100 amount of a nutrient form, complete?). complete=False means the true amount may be
+    higher than `known` (0 when nothing is known), so a limit on that form cannot be confirmed.
+
+    - given in per100 → that value, complete
+    - legacy `folic_acid_ug` for added folate → a KNOWN PART only: folic acid says nothing about added
+      5-MTHF, so the combined amount stays open unless no folate was added at all (PR #48 review)
+    - otherwise form_value() below: a value → complete, None → (0, incomplete)"""
+    p = ingr["per100"]
+    if p.get(fk) is not None:
+        return float(p[fk]), True
+    parent = FORMS[fk][0]
+    for old, new in LEGACY_FORMS.items():
+        if new == fk and p.get(old) is not None and p.get(parent) != 0:
+            fortified = ingr.get("fortified") is True or parent in (ingr.get("fortified_with") or [])
+            if not fortified and p[old] == 0:
+                return 0.0, True             # nothing added, and folate forms only occur when added
+            return float(p[old]), False      # folic acid known; added 5-MTHF unknown
+    v = form_value(ingr, fk)
+    return (0.0, False) if v is None else (float(v), True)
+
+
 def form_value(ingr, fk):
-    """Per-100 amount of a nutrient form, or None when it cannot be known.
+    """Per-100 amount of a nutrient form, or None when it cannot be known (legacy keys: see form_amount).
 
     - given in per100 → that value
     - parent nutrient known to be 0 → 0
@@ -185,9 +206,6 @@ def form_value(ingr, fk):
     p = ingr["per100"]
     if p.get(fk) is not None:
         return p[fk]
-    for old, new in LEGACY_FORMS.items():
-        if new == fk and p.get(old) is not None:
-            return p[old]
     parent = FORMS[fk][0]
     if p.get(parent) == 0:
         return 0.0

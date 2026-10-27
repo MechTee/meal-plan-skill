@@ -96,9 +96,22 @@ pip install -r ~/.claude/skills/athlete-meal-plan/requirements.txt
 
 **Claude apps (upload a skill)**
 
+1. Open [Releases](https://github.com/MechTee/meal-plan-skill/releases) and choose a version.
+2. Download **`athlete-meal-plan.zip`** under **Assets** (not GitHub's automatic **Source code (zip)**).
+3. Upload that ZIP in the app's skill settings.
+
+The release ZIP contains a single `athlete-meal-plan/` folder with the skill, scripts, templates,
+references, Python requirements and regression tests. For a Claude Code install without Git,
+extract it into `~/.claude/skills/` (or a project's `.claude/skills/`) and install its requirements
+as shown above.
+
+**Build a ZIP yourself** (also works before the first release is published)
+
 ```bash
 git clone https://github.com/MechTee/meal-plan-skill athlete-meal-plan
-cd athlete-meal-plan && git archive --format=zip --prefix=athlete-meal-plan/ -o ../athlete-meal-plan.zip HEAD
+cd athlete-meal-plan
+git archive --format=zip --prefix=athlete-meal-plan/ -o ../athlete-meal-plan.zip HEAD \
+  SKILL.md README.md requirements.txt scripts assets references tests evals
 ```
 
 Upload `athlete-meal-plan.zip` in the app's skill settings.
@@ -110,6 +123,19 @@ file or page publishing tools → files written to an `outputs/` folder; subagen
 research.
 
 **Check an install:** `python3 -m unittest discover tests` runs the script regression tests.
+
+## Release packaging
+
+The **Package skill** GitHub Actions workflow builds the ZIP and runs the regression tests from
+the extracted package on pull requests, pushes to `main`, manual workflow runs and published
+releases. Each successful run keeps the tested ZIP in its **skill-package** workflow artifact;
+extract that artifact download once to get the installable `athlete-meal-plan.zip` inside.
+
+To publish a downloadable version, create and publish a GitHub release with a tag that includes
+this workflow (after it has been merged). Stable releases and prereleases both trigger packaging
+from the tagged commit. Once the workflow succeeds, `athlete-meal-plan.zip` appears in that
+release's **Assets**. Re-running the release workflow replaces the asset with the same name.
+Manual workflow runs only build and test; they do not publish a release.
 
 ## Notes and limits
 

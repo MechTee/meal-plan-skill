@@ -443,14 +443,21 @@ def build_week(wb, plan, days, mic_tot, eaa_tot, mic_gap=None):
             else:
                 v = (mt.get(k) or {}).get(key)
                 if key == "ul":
-                    forms = [x for x in (mt.get(k) or {}).get("limits", []) if x.get("basis", "total") != "total"]
+                    lims = M.limits_of(mt.get(k) or {})
+                    forms = [x for x in lims if x["basis"] != "total"]
+                    total = next((x["ul"] for x in lims if x["basis"] == "total"), None)
                     if forms:
-                        # form-specific limits apply to one form only, so they are not compared with the total here
-                        c = put(ws, f"{col}{r}", " · ".join(f"{x['ul']:g} ({M.FORMS.get(x['basis'], (0, x['basis']))[1]})" for x in forms),
-                                color=GREY, italic=True, wrap=True)
-                        c.comment = Comment("This limit applies only to the named form (supplements/fortified foods for folic acid, "
-                                            "added magnesium and niacin forms; preformed retinol for vitamin A). It is checked by "
-                                            "mealplan.py check, not against the total in this row.", "plan")
+                        # form-specific limits apply to one form only, so they are not compared with the total here;
+                        # the Status row checks the live supplement against them and never reads plain "ok"
+                        text = " · ".join(f"{x['ul']:g} ({M.FORMS.get(x['basis'], (0, x['basis']))[1]})" for x in forms)
+                        c = put(ws, f"{col}{r}", total if total is not None else text,
+                                color=BLUE if total is not None else GREY, italic=total is None, wrap=True)
+                        c.comment = Comment(("Total limit in this cell; also " if total is not None else "") +
+                                            f"form-specific limit(s): {text}. These apply only to the named form "
+                                            "(supplements/fortified foods for added folate — folic acid + 5-MTHF — added "
+                                            "magnesium and niacin forms; preformed retinol for vitamin A), not to the total. "
+                                            "The Status row flags a supplement that alone exceeds one; everything else is "
+                                            "checked by mealplan.py check.", "plan")
                         continue
                 if v is not None:
                     c = put(ws, f"{col}{r}", v, color=color)
@@ -467,22 +474,47 @@ def build_week(wb, plan, days, mic_tot, eaa_tot, mic_gap=None):
     r += 1
     put(ws, f"A{r}", "Status", bold=True)
     rows["status"] = r
-    for j, _ in enumerate(MICRO_KEYS):
+    try:
+        engine = {x["key"]: x for x in M.compute(plan)["checks"]["micros"]}
+    except Exception:   # the workbook must still build; the Status comment then just omits the engine verdict
+        engine = {}
+    for j, k in enumerate(MICRO_KEYS):
         col = L(2 + j)
         avg, peak = f"{col}{rows['Average incl. supplements']}", f"(MAX({col}{m0}:{col}{m1})+N({col}{rows['Supplements / day']}))"
         fl, aim, ul, gp = (f"N({col}{rows['Floor (reference)']})", f"N({col}{rows['Aim (athlete)']})",
                            f"N({col}{rows['Upper limit']})", f"{col}{rows['gap']}")
-        put(ws, f"{col}{r}",
-            f'=IF(AND({fl}=0,{aim}=0,{ul}=0),IF({gp}>0.01,"≥ (no target)","no target"),'
-            f'IF(AND({ul}>0,{peak}>{ul}),"ABOVE UL",IF({gp}>0.01,'
-            f'IF({avg}<MAX({fl},{aim}),"≥ known part below "&IF({avg}<{fl},"floor","aim")&IF({ul}>0," · UL unverified",""),'
-            f'IF({ul}>0,"≥ aim · UL unverified","≥ aim (lower bound)")),'
-            f'IF({avg}<{fl},"below floor",IF({avg}<{aim},"below aim","ok")))))', wrap=True)
+        supp = f"N({col}{rows['Supplements / day']})"
+        # gp > 0.01 words the MINIMUM side as a lower bound; a total UL is only "within" when gp = 0 exactly —
+        # a few grams of a concentrated source without a value can carry the total over the limit
+        base = (f'IF(AND({fl}=0,{aim}=0,{ul}=0),IF({gp}>0.01,"≥ (no target)","no target"),'
+                f'IF(AND({ul}>0,{peak}>{ul}),"ABOVE UL",IF({gp}>0.01,'
+                f'IF({avg}<MAX({fl},{aim}),"≥ known part below "&IF({avg}<{fl},"floor","aim")&IF({ul}>0," · UL unverified",""),'
+                f'IF({ul}>0,"≥ aim · UL unverified","≥ aim (lower bound)")),'
+                f'IF(AND({ul}>0,{gp}>0),IF({avg}<{fl},"below floor · UL unverified",IF({avg}<{aim},"below aim · UL unverified","UL unverified")),'
+                f'IF({avg}<{fl},"below floor",IF({avg}<{aim},"below aim","ok"))))))')
+        forms = [x for x in M.limits_of((mt.get(k) or {})) if x["basis"] != "total"]
+        if forms:
+            # Form-specific limits: the supplement alone is a live lower bound of the form where every
+            # supplement of the nutrient is that form (magnesium, folate) — above the limit is then certain.
+            # Anything short of that cannot be confirmed from this sheet, so the status never reads "ok".
+            # SUBSTITUTE turns "ok · form UL unchecked" into "form UL unchecked"; no other base string contains "ok · ".
+            formula = f'SUBSTITUTE({base}&" · form UL unchecked","ok · ","")'
+            for x in reversed([x for x in forms if x["basis"] in M.SUPPLEMENT_IS_FORM]):
+                formula = f'IF({supp}>{x["ul"]:g},"ABOVE UL ({M.FORMS[x["basis"]][1]})",{formula})'
+            c = put(ws, f"{col}{r}", "=" + formula, wrap=True)
+            verdict = (engine.get(k) or {}).get("status")
+            c.comment = Comment("Form-specific upper limit(s) are not recalculated in this sheet beyond the supplement "
+                                "row: run mealplan.py check after editing grams or supplements."
+                                + (f" At build, mealplan.py check reported: {verdict}." if verdict else ""), "plan")
+        else:
+            put(ws, f"{col}{r}", "=" + base, wrap=True)
     ws.row_dimensions[r].height = 42
     st = f"B{r}:{L(1 + len(MICRO_KEYS))}{r}"
     ws.conditional_formatting.add(st, FormulaRule(formula=[f'AND(B{r}<>"ok",B{r}<>"no target")'], font=Font(name=FONT, color="B26B00", bold=True)))
     put(ws, f"A{r + 1}", "“≥”: some food has no value for this nutrient, so the real intake is higher than shown. "
-                         "Upper limits can only be confirmed once those values are filled in on the Ingredients sheet.",
+                         "Upper limits can only be confirmed once those values are filled in on the Ingredients sheet. "
+                         "“form UL unchecked”: a limit for one form (e.g. added magnesium) is not recalculated here — "
+                         "run mealplan.py check.",
         color=GREY, italic=True)
     r += 2
     pr = rows["% of aim"]

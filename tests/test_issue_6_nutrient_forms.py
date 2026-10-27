@@ -41,7 +41,7 @@ def with_test_food(per100, origin=None, grams=100):
 class TargetsModelForms(unittest.TestCase):
     def test_form_limits_are_structured_not_notes(self):
         self.assertEqual(STANDARD["magnesium_mg"]["limits"], [{"basis": "magnesium_added_mg", "ul": 250}])
-        self.assertEqual(STANDARD["folate_ug"]["limits"], [{"basis": "folic_acid_ug", "ul": 1000}])
+        self.assertEqual(STANDARD["folate_ug"]["limits"], [{"basis": "folate_added_ug", "ul": 1000}])
         self.assertEqual(STANDARD["vitA_rae_ug"]["limits"], [{"basis": "retinol_ug", "ul": 3000}])
         self.assertIsNone(STANDARD["vitA_rae_ug"]["ul"])
         self.assertEqual({x["basis"] for x in STANDARD["niacin_mg"]["limits"]}, {"nicotinamide_mg", "nicotinic_acid_mg"})
@@ -57,19 +57,50 @@ class SupplementalLimits(unittest.TestCase):
         _, r = row(with_targets(), "magnesium_mg")   # ~500 mg from food, no supplement
         self.assertFalse(r["status"].startswith("ABOVE UL"))
 
-    def test_folate_supplement_of_unknown_form_is_unresolved(self):
+    def test_folate_supplement_of_unstated_form_counts_toward_limit(self):
+        """Every folate supplement is folic acid or a 5-MTHF salt, and EFSA's UL covers both (PR #48 review)."""
         res, r = row(with_targets(folate_ug={"supplement": 2000}), "folate_ug")
-        self.assertIn("UL unresolved", r["status"])
-        self.assertNotEqual(r["status"], "ok")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
 
     def test_folic_acid_supplement_above_limit_is_flagged(self):
         _, r = row(with_targets(folate_ug={"supplement": 2000, "supplement_forms": {"folic_acid_ug": 2000}}), "folate_ug")
         self.assertTrue(r["status"].startswith("ABOVE UL"))
 
-    def test_methylfolate_supplement_is_not_folic_acid(self):
-        _, r = row(with_targets(folate_ug={"supplement": 2000, "supplement_forms": {"folic_acid_ug": 0}}), "folate_ug")
-        self.assertFalse(r["status"].startswith("ABOVE UL"))
-        self.assertNotIn("unresolved", r["status"])
+
+class SupplementalFolateIncludesMethylfolate(unittest.TestCase):
+    """PR #48 review [P1]: EFSA 2023 (doi:10.2903/j.efsa.2023.8353, Table 12) applies the adult 1,000 µg/day UL
+    to folic acid, L-5-MTHF calcium and (6S)-5-MTHF glucosamine combined. A methylfolate supplement used to be
+    exempt (status "within UL", limit peak 0)."""
+
+    def test_methylfolate_supplement_counts_toward_folate_limit(self):
+        # the old fixture: 2,000 µg supplement declared as "no folic acid" (i.e. methylfolate)
+        res, r = row(with_targets(folate_ug={"supplement": 2000, "supplement_forms": {"folic_acid_ug": 0}}), "folate_ug")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
+        lim = next(x for x in r["limits"] if x["basis"] == "folate_added_ug")
+        self.assertGreaterEqual(lim["peak"], 2000)
+        self.assertEqual(lim["status"], "above")
+        self.assertTrue(any(f.startswith("micro folate_ug: ABOVE UL") for f in res["checks"]["flags"]))
+
+    def test_methylfolate_within_limit_is_ok(self):
+        _, r = row(with_targets(folate_ug={"supplement": 400}), "folate_ug")
+        lim = next(x for x in r["limits"] if x["basis"] == "folate_added_ug")
+        self.assertEqual(lim["status"], "ok")
+        self.assertAlmostEqual(lim["peak"], 400)
+
+    def test_legacy_folic_acid_basis_in_plan_file_is_read_as_combined_limit(self):
+        p = with_targets(folate_ug={"supplement": 2000, "limits": [{"basis": "folic_acid_ug", "ul": 1000}]})
+        _, r = row(p, "folate_ug")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
+
+    def test_fortified_food_added_folate_counts(self):
+        p = with_test_food({"folate_ug": 2500, "folate_added_ug": 2000})
+        p["ingredients"]["testfood"]["fortified_with"] = ["folate_ug"]
+        _, r = row(p, "folate_ug")
+        self.assertTrue(r["status"].startswith("ABOVE UL"), r["status"])
+
+    def test_natural_food_folate_does_not_count(self):
+        _, r = row(with_test_food({"folate_ug": 2500}, origin="plant"), "folate_ug")
+        self.assertFalse(r["status"].startswith("ABOVE UL"), r["status"])
 
 
 class PreformedVitaminA(unittest.TestCase):

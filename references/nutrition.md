@@ -63,7 +63,7 @@ Three levels per nutrient, per day:
   countries the national reference is usually within a few % — use D-A-CH unless the athlete asks.
 - **Aim** = floor adjusted for the athlete (below). This is what the plan is built to hit.
 - **UL** = EFSA tolerable upper level (or safe level) for total intake, food + supplements, unless
-  the UL is defined for supplements only (magnesium, folic acid, niacin forms).
+  the UL is defined for supplements only (magnesium, supplemental folate, niacin forms).
 
 Athlete adjustments ("a bit higher, depending on nutrient")
 | Nutrient | Aim rule | Why |
@@ -83,7 +83,7 @@ Athlete adjustments ("a bit higher, depending on nutrient")
 Reference values used by `targets.py` — DGE/ÖGE reference values, 3rd edition (2025), adults 25–<51,
 ♂ / ♀ (year of derivation), checked against dge.de on 2026-10-24; UL = EFSA:
 B1 1.2/1.0 (2015) · B2 1.4/1.1 (2015) · niacin 15/12 mg NE (2015) · B5 5 (2021) · B6 1.6/1.4 (2019; UL 12) ·
-biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg folic acid) · B12 4.0 µg (2018) ·
+biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg supplemental folic acid + 5-MTHF) · B12 4.0 µg (2018) ·
 K 4 000 (2016) · **P 550** (2024; was 700) · Mg 350/300 (2021) · Ca 1 000 (2013; UL 2 500) · Zn 11/14/16 ♂,
 7/8/10 ♀ by phytate (2019; UL 25) · **Fe 11 / 16 menstruating, 11 premenopausal without menstruation, 14 after menopause** (2023; EFSA safe level 40) ·
 Se 70/60 (2015; UL 255) · **I 150** (2025; was 200; UL 600) · vit A 850/700 µg RAE (2020; UL 3 000 retinol) ·
@@ -93,7 +93,8 @@ Na 1 500 mg (2016). Each value's page is linked in `targets.py` (`REF_DATA`) and
 Supplements and ULs: add regular supplements as a daily average (`supplement` in plan.json);
 the check compares food + supplement against total ULs. Some ULs apply to one form only and are
 modelled as such (`limits` with a form `basis`): magnesium 250 mg covers supplemental/added
-magnesium (not food magnesium); folate 1 000 µg covers synthetic folic acid; vitamin A 3 000 µg
+magnesium (not food magnesium); folate 1 000 µg covers folic acid and 5-MTHF salts (methylfolate) from supplements and fortified
+foods combined (EFSA 2023), not natural food folate; vitamin A 3 000 µg
 covers preformed retinol (carotenoids from plants do not count); niacin 900 mg nicotinamide and
 10 mg nicotinic acid. Record the supplement's form (`supplement_forms`); if it is unknown the check
 says "unresolved". Multivitamins on top of a fortified diet often

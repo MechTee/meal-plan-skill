@@ -27,14 +27,19 @@ NUTRIENTS = MACROS + MICROS
 # only where that is certain (see form_value); otherwise they are unknown and limits stay unresolved.
 FORMS = OrderedDict([
     ("retinol_ug", ("vitA_rae_ug", "preformed vitamin A (retinol)")),
-    ("folic_acid_ug", ("folate_ug", "folic acid (synthetic)")),
+    # EFSA 2023: the 1,000 µg UL covers the COMBINED supplemental intake of folic acid and the 5-MTHF salts
+    # (L-5-MTHF calcium, (6S)-5-MTHF glucosamine), from supplements and fortified foods — not food folate
+    ("folate_added_ug", ("folate_ug", "added/supplemental folate (folic acid + 5-MTHF)")),
     ("magnesium_added_mg", ("magnesium_mg", "added/supplemental magnesium")),
     ("nicotinamide_mg", ("niacin_mg", "nicotinamide")),
     ("nicotinic_acid_mg", ("niacin_mg", "nicotinic acid")),
 ])
 FORM_KEYS = list(FORMS)
-# supplement forms that follow from the nutrient itself: every magnesium supplement is supplemental magnesium
-SUPPLEMENT_IS_FORM = {"magnesium_added_mg"}
+# supplement forms that follow from the nutrient itself: every magnesium supplement is supplemental
+# magnesium, and every folate supplement (folic acid or a 5-MTHF salt) is supplemental folate
+SUPPLEMENT_IS_FORM = {"magnesium_added_mg", "folate_added_ug"}
+# older plan files: `folic_acid_ug` was the folate limit's basis and per100 key — read it as the combined form
+LEGACY_FORMS = {"folic_acid_ug": "folate_added_ug"}
 AAS = ["his", "ile", "leu", "lys", "met", "cys", "phe", "tyr", "thr", "trp", "val"]
 # FAO 2013 scoring pattern, older child/adolescent/adult, mg per g protein
 FAO = {"his": 16, "ile": 30, "leu": 61, "lys": 48, "saa": 23, "aaa": 41, "thr": 25, "trp": 6.6, "val": 40}
@@ -174,12 +179,15 @@ def form_value(ingr, fk):
     - parent nutrient known to be 0 → 0
     - retinol: plant and fungal foods contain none (their vitamin A is carotenoids), nor do
       non-food ingredients (origin "other": water, salt, pure compounds) → 0
-    - folic acid, added magnesium, nicotinamide, nicotinic acid only occur when added: 0 unless the
+    - added folate, added magnesium, nicotinamide, nicotinic acid only occur when added: 0 unless the
       ingredient lists the parent nutrient in `fortified_with` (or is marked `"fortified": true`)
     """
     p = ingr["per100"]
     if p.get(fk) is not None:
         return p[fk]
+    for old, new in LEGACY_FORMS.items():
+        if new == fk and p.get(old) is not None:
+            return p[old]
     parent = FORMS[fk][0]
     if p.get(parent) == 0:
         return 0.0
@@ -242,7 +250,10 @@ class Acc:
                 "score": self.score(), "mshare": self.mshare(),
                 # unfiltered and unrounded: grams of food with an unknown amount of each form. mshare is for
                 # display and drops shares ≤ 0.1 %; limit checks must see even a pinch of a fortified food.
-                "form_missing_g": {k: self.miss[k] for k in FORM_KEYS if self.miss.get(k, 0) > 0}}
+                "form_missing_g": {k: self.miss[k] for k in FORM_KEYS if self.miss.get(k, 0) > 0},
+                # the same for every nutrient: a total upper limit is only verified when this is 0 — a few
+                # grams of a concentrated source can carry a total over its limit (PR #48 review)
+                "missing_g": {k: self.miss[k] for k in NUTRIENTS if self.miss.get(k, 0) > 0}}
 
 
 def recipe_acc(plan, rkey):
@@ -862,7 +873,10 @@ def allergy_check(plan):
         out["flags"].append("ALLERGENS NOT CHECKED for: " + ", ".join(out["unchecked"]) +
                             " — add `allergens` from the product label")
     return out
-INCOMPLETE = 0.01  # share of a day's food mass without a value above which a total is only a lower bound
+# Share of a day's food mass without a value above which the MINIMUM side is worded as a lower bound
+# ("met (known part alone)"). Never used to confirm an upper limit: a total UL is only "within UL" when no
+# food at all lacks a value (limit_status, missing_g), since a pinch of a concentrated source can exceed it.
+INCOMPLETE = 0.01
 
 
 def micro_status(avg, peak, lim, missing_share):
@@ -895,18 +909,22 @@ def micro_status(avg, peak, lim, missing_share):
     flag = status != "ok" and not (not complete and min_status == "met (known part alone)" and ul_status == "n/a")
     return {"complete": complete, "lower_bound": not complete, "min_status": min_status, "ul_status": ul_status,
             "status": status, "flag": flag}
-def limit_status(res, key, lim, avg, peak, missing_share):
+def limit_status(res, key, lim, avg, peak, missing_share, missing_g=None):
     """Status of one nutrient: the minimum side from micro_status() (#4: incomplete data makes the total a
     lower bound) and every upper limit from limit_check() (#6: total or a specific form). A total limit
-    that is not exceeded can only be confirmed with complete data; a form limit needs a known amount of
-    that form in every food."""
+    that is not exceeded can only be confirmed when NO food lacks a value (missing_g, unrounded grams per
+    day — not the display share, which tolerates INCOMPLETE and drops ≤ 0.1 %); a form limit needs a known
+    amount of that form in every food."""
     out = micro_status(avg, peak, {**lim, "ul": None}, missing_share)
     complete = out["complete"]
+    if missing_g is None:
+        missing_g = max((cd["total"].get("missing_g", {}).get(key, 0) for cd in res["cycle_days"]), default=0)
     checks_ = [limit_check(res, key, lim, L) for L in limits_of(lim)]
     for x in checks_:
-        if x["basis"] == "total" and x["status"] == "ok" and not complete:
+        if x["basis"] == "total" and x["status"] == "ok" and missing_g > 0:
             x["status"] = "unverified"
-            x["reason"] = f"UL {x['ul']:g} unverified — {missing_share:.0%} of the food has no {key} value"
+            g = fmt_num(round(missing_g, 3)) if missing_g >= 0.001 else "< 0.001"
+            x["reason"] = f"UL {x['ul']:g} unverified — {g} g of food per day has no {key} value"
     above = [x for x in checks_ if x["status"] == "above"]
     unverified = [x for x in checks_ if x["status"] == "unverified"]
     unresolved = [x for x in checks_ if x["status"] == "unresolved"]
@@ -924,11 +942,14 @@ def limit_status(res, key, lim, avg, peak, missing_share):
         # "(known part alone)": a total limit exceeded although some food has no value — form limits are
         # judged on the form's own data (limit_check), not on the total's completeness
         st = "ABOVE UL" + "".join(f" ({x['label']})" for x in above if x["basis"] != "total") + \
-             ("" if complete or not any(x["basis"] == "total" for x in above) else " (known part alone)")
-    elif complete:
-        st = {"below floor": "below floor", "below aim": "below aim"}.get(out["min_status"], "ok")
+             ("" if missing_g == 0 or not any(x["basis"] == "total" for x in above) else " (known part alone)")
     else:
-        st = "data incomplete: " + out["min_status"] + ("; UL unverified" if unverified else "")
+        if complete:
+            st = {"below floor": "below floor", "below aim": "below aim"}.get(out["min_status"], "ok")
+        else:
+            st = "data incomplete: " + out["min_status"]
+        if unverified:
+            st = "UL unverified" if st == "ok" else st + "; UL unverified"
     if unresolved and not above:
         st = (st + "; " if st != "ok" else "") + "UL unresolved: " + "; ".join(x["reason"] for x in unresolved)
     flag = st != "ok" and not (not complete and out["min_status"] == "met (known part alone)"
@@ -940,6 +961,8 @@ def limit_status(res, key, lim, avg, peak, missing_share):
 def limits_of(lim):
     """Upper limits of one nutrient: `limits` [{basis, ul}] plus the legacy total `ul`."""
     out = [dict(x) for x in lim.get("limits", [])]
+    for x in out:
+        x["basis"] = LEGACY_FORMS.get(x.get("basis", "total"), x.get("basis", "total"))
     if lim.get("ul") and not any(x.get("basis", "total") == "total" for x in out):
         out.append({"basis": "total", "ul": lim["ul"]})
     return out
@@ -1059,6 +1082,7 @@ def checks(plan, res):
             extra = "".join(f"; highest day {worst} {tot_max:.1f}" if x["basis"] == "total"
                             else f"; {x['label']} peak {x['peak']:g} vs UL {x['ul']:g}"
                             for x in row["limits"] if x["status"] == "above")
+            extra += "".join(f"; {x['reason']}" for x in row["limits"] if x["status"] == "unverified" and row["complete"])
             out["flags"].append(f"micro {k}: {row['status']} — cycle avg {'≥ ' if not row['complete'] else ''}{tot_avg:.1f} "
                                 f"(floor {lim.get('floor')}, aim {lim.get('aim')}, UL {row['ul']}"
                                 + (f"; {miss:.0%} of the food has no value" if not row["complete"] else "") + f"){extra}")

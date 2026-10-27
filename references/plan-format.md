@@ -52,10 +52,12 @@ prints it). `supplement` is a
 daily average and is added to food in checks and in the workbook ("Supplements / day" row).
 
 Upper limits: `ul` applies to the **total** intake. `limits: [{"basis": "<form key>", "ul": n}]`
-applies to one form only (magnesium → `magnesium_added_mg` 250; folate → `folic_acid_ug` 1000;
+applies to one form only (magnesium → `magnesium_added_mg` 250; folate → `folate_added_ug` 1000;
 vitamin A → `retinol_ug` 3000; niacin → `nicotinamide_mg` 900 and `nicotinic_acid_mg` 10). Say what form a
-supplement is in with `supplement_forms`, e.g. `{"supplement": 400, "supplement_forms": {"folic_acid_ug": 400}}`.
-A magnesium supplement always counts as added magnesium; for the others an unknown supplement form
+supplement is in with `supplement_forms`, e.g. `{"supplement": 20, "supplement_forms": {"nicotinamide_mg": 20}}`.
+A magnesium supplement always counts as added magnesium, and a folate supplement always counts as added
+folate (EFSA 2023: the folate UL covers folic acid **and** the 5-MTHF salts combined — methylfolate is not
+exempt); for the others an unknown supplement form
 leaves the limit **unresolved** (reported, never "ok").
 
 ## ingredients
@@ -89,10 +91,11 @@ Nutrient keys (`per100`): `kcal protein_g fat_g satfat_g carb_g sugar_g fiber_g 
 phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA_rae_ug vitC_mg
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
 Nutrient **forms** with their own upper limits (optional per100 keys): `retinol_ug` (preformed
-vitamin A, part of `vitA_rae_ug`), `folic_acid_ug` (synthetic, part of `folate_ug`),
+vitamin A, part of `vitA_rae_ug`), `folate_added_ug` (folic acid + added 5-MTHF from fortification, part of `folate_ug`; the older key
+`folic_acid_ug` is read as this),
 `magnesium_added_mg` (added/supplemental magnesium), `nicotinamide_mg`, `nicotinic_acid_mg` (part of
 `niacin_mg`). When a form is not given it is 0 where that is certain — the parent nutrient is 0;
-retinol in a `plant`, `fungal` or `other` ingredient; folic acid, added magnesium and the niacin forms in a food not
+retinol in a `plant`, `fungal` or `other` ingredient; added folate, added magnesium and the niacin forms in a food not
 `fortified_with` that nutrient — and unknown otherwise; a form limit with any unknown amount stays
 "UL unresolved".
 
@@ -195,7 +198,9 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   until these warnings are gone.
 - `horizon_cycles` (optional, default ≈ one year: `ceil(52 / weeks)`): how many cycles the shopping list
   is simulated for. Every cycle in that range has its own computed quantities (`packs_by_cycle`); the
-  page shows nothing beyond it and asks for the plan to be re-rendered, rather than guessing.
+  page shows nothing beyond it, rather than guessing. The end date is fixed by this number and
+  `cycle.start_date`, so re-rendering an unchanged plan gives the same end: to extend an expired list,
+  raise `horizon_cycles` (to at least the cycle the page reports) and re-render.
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
   movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till), `cycle_cost` /

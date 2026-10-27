@@ -181,8 +181,12 @@ function runCost(r){
 function render(){
   renderCycles(); renderFilters();
   if (state.cycle > H) {
+    // the horizon is fixed by plan.json (shopping.horizon_cycles, counted from cycle.start_date), so re-running
+    // the scripts on the same plan reproduces the same end date — say which setting has to change
     $("runs").innerHTML = `<p class="desc">This shopping list covers ${H} cycles (until ${esc(S.horizonEnd || "the end of cycle " + H)}). `
-      + `Re-run the plan scripts to extend it — quantities after that are not computed, so none are shown.</p>`;
+      + `Quantities after that are not computed, so none are shown. To extend it, increase `
+      + `<code>shopping.horizon_cycles</code> in plan.json (now ${H}; at least ${state.cycle} covers this cycle) `
+      + `and re-run the plan scripts — re-running with the plan unchanged gives the same end date.</p>`;
     return;
   }
   const runs = S.runs.map(r => ({...r, n: shiftNum(r.date, state.cycle), d: shift(r.date, state.cycle)}));

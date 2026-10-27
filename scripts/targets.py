@@ -36,7 +36,8 @@ BASE_PAL = {"desk": 1.25, "standing": 1.4, "manual": 1.6}  # incl. thermic effec
 # breastfeeding. Each entry: male, female, UL, note, type, year of derivation ("Stand Ableitung") and source page.
 # UL = EFSA tolerable upper level (or safe level). A number applies to TOTAL intake; a list of
 # (form, limit) applies only to that form (see FORMS in mealplan.py) — e.g. the magnesium UL covers
-# supplemental/added magnesium, the vitamin A UL preformed retinol, the folate UL synthetic folic acid.
+# supplemental/added magnesium, the vitamin A UL preformed retinol, the folate UL supplemental/added folate
+# (folic acid and the 5-MTHF salts combined — EFSA 2023, doi:10.2903/j.efsa.2023.8353).
 # Checked against dge.de on 2026-10-24 (3rd edition, printed Sept 2025); re-check when the DGE publishes revisions.
 REFERENCE = {
     "name": "DGE/ÖGE reference values for nutrient intake, 3rd edition (2025)",
@@ -53,7 +54,9 @@ REF_DATA = {  # key: (male, female, UL, note, type, derived, page)
     "pantothenic_mg": (5, 5, None, "estimated value", "estimated value", 2021, "pantothensaeure/"),
     "b6_mg": (1.6, 1.4, 12, "EFSA UL 12 mg (2023)", "recommendation", 2019, "vitamin-b6/"),
     "biotin_ug": (40, 40, None, "estimated value", "estimated value", 2020, "biotin/"),
-    "folate_ug": (300, 300, [("folic_acid_ug", 1000)], "UL 1000 µg applies to synthetic folic acid only", "recommendation", 2015, "folat/"),
+    "folate_ug": (300, 300, [("folate_added_ug", 1000)],
+                  "UL 1000 µg applies to supplemental/added folate combined: folic acid + 5-MTHF salts (EFSA 2023)",
+                  "recommendation", 2015, "folat/"),
     "b12_ug": (4.0, 4.0, None, "vegan: must supplement; absorption saturates — dose per pack", "estimated value", 2018, "vitamin-b12/"),
     "potassium_mg": (4000, 4000, None, "estimated value", "estimated value", 2016, "kalium/"),
     "phosphorus_mg": (550, 550, None, "DGE lowered from 700 mg", "estimated value", 2024, "phosphor/"),

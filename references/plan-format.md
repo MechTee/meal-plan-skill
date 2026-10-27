@@ -28,7 +28,8 @@ and lists every unknown key reference.
 | athlete, bw_kg | body weight drives protein/kg and per-feeding targets on pages |
 | currency, locale, country | `"EUR"`, `"de-DE"` — formatting on the shopping page |
 | allergies | **required.** `{"status": "none" \| "known" \| "unknown", "items": ["peanuts", "sesame"], "traces_matter": true, "note": "…"}`. `known` needs at least one item; unanswered = `unknown`, never `none` |
-| freezer_portions | freezer capacity in containers; the check flags the peak above it |
+| ffm_kg, exercise_kcal, goal | fat-free mass (from `targets.py` → `bmr.ffm_kg`) and planned exercise energy per day type, e.g. `{"training": 435, "rest": 0}` — the check computes energy availability per day; a day can override with its own `exercise_kcal`. `goal: "cut"` makes a missing EA check a flag |
+| freezer_portions | freezer capacity in containers (number ≥ 0); the check flags any peak above it. `0` means no freezer, so every frozen batch portion is flagged; leave it out only when capacity is genuinely not a constraint |
 | workbook_notes | list of short notes shown under the Week summary title (e.g. week-2/4 swaps) |
 | ref_label | footer text for the micro bars, e.g. "Bars show % of your daily aim (D-A-CH + athlete adjustments)." |
 | sources | `[["USDA FoodData Central","https://fdc.nal.usda.gov/"], …]` for the page footers |
@@ -50,6 +51,15 @@ and lists every unknown key reference.
 prints it). `supplement` is a
 daily average and is added to food in checks and in the workbook ("Supplements / day" row).
 
+Upper limits: `ul` applies to the **total** intake. `limits: [{"basis": "<form key>", "ul": n}]`
+applies to one form only (magnesium → `magnesium_added_mg` 250; folate → `folate_added_ug` 1000;
+vitamin A → `retinol_ug` 3000; niacin → `nicotinamide_mg` 900 and `nicotinic_acid_mg` 10). Say what form a
+supplement is in with `supplement_forms`, e.g. `{"supplement": 20, "supplement_forms": {"nicotinamide_mg": 20}}`.
+A magnesium supplement always counts as added magnesium, and a folate supplement always counts as added
+folate (EFSA 2023: the folate UL covers folic acid **and** the 5-MTHF salts combined — methylfolate is not
+exempt); for the others an unknown supplement form
+leaves the limit **unresolved** (reported, never "ok").
+
 ## ingredients
 
 (`//` comments below are explanations only — JSON files cannot contain them.)
@@ -67,6 +77,8 @@ daily average and is added to food in checks and in the workbook ("Supplements /
   "digestibility": 0.9,
   "allergens": ["soy"],                  // what the product contains (see list below); [] = none
   "may_contain": [],                     // trace warnings from the label
+  "origin": "plant",                     // plant | fungal | animal | other (water, salt, pure compounds) — only animal foods contain preformed retinol
+  "fortified_with": [],                  // parent nutrients added by the maker, e.g. ["calcium_mg", "vitD_ug", "folate_ug"]
   "piece_g": null,                       // grams per piece when bought by the piece
   "shop": {"buy": "stock", "pack_size": 1000, "pack_unit": "g", "pack_label": "Vantastic Soja Schnetzel 1 kg",
            "price": 8.99, "store": "online", "link": "https://…", "shelf_days": null, "carry": true,
@@ -78,8 +90,21 @@ Nutrient keys (`per100`): `kcal protein_g fat_g satfat_g carb_g sugar_g fiber_g 
 `thiamin_mg riboflavin_mg niacin_mg pantothenic_mg b6_mg biotin_ug folate_ug b12_ug potassium_mg
 phosphorus_mg magnesium_mg calcium_mg zinc_mg iron_mg selenium_ug iodine_ug vitA_rae_ug vitC_mg
 vitD_ug vitE_mg vitK_ug sodium_mg nitrate_mg`.
-Leave a key **out** (or `null`) when unknown — it is tracked as missing data and shown as "≥" on the
-pages; write `0` only when the true value is zero. `sodium_mg` defaults to `salt_g × 400`.
+Nutrient **forms** with their own upper limits (optional per100 keys): `retinol_ug` (preformed
+vitamin A, part of `vitA_rae_ug`), `folate_added_ug` (folic acid + added 5-MTHF from fortification, part of `folate_ug`; the older key
+`folic_acid_ug` counts as a known part of it only — in a fortified food the 5-MTHF share stays unknown,
+so give `folate_added_ug` to resolve the limit),
+`magnesium_added_mg` (added/supplemental magnesium), `nicotinamide_mg`, `nicotinic_acid_mg` (part of
+`niacin_mg`). When a form is not given it is 0 where that is certain — the parent nutrient is 0;
+retinol in a `plant`, `fungal` or `other` ingredient; added folate, added magnesium and the niacin forms in a food not
+`fortified_with` that nutrient — and unknown otherwise; a form limit with any unknown amount stays
+"UL unresolved".
+
+Leave a key **out** (or `null`) when unknown — it is tracked as missing data; write `0` only when the
+true value is zero. A total with missing values is a **lower bound**: the check, report, workbook
+("Food without a value" and "Status" rows) and pages show it with "≥". A lower bound can show that a
+minimum is met or an upper limit is exceeded, but never that intake stays *below* an upper limit —
+that stays "UL unverified" until the values are filled in. `sodium_mg` defaults to `salt_g × 400`.
 Carbs are net carbs (EU-label style); fibre separate. For US-label data subtract fibre from total
 carbohydrate.
 
@@ -125,9 +150,11 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
 ```
 - All seven days are required (`Mon` … `Sun`). `type` is `training` or `rest` (picks targets).
 - `label` may carry a suffix, e.g. `"Wednesday (legs)"` → sheet title "Wednesday — Training (legs)".
-- `week_overrides` replaces whole days in specific weeks of the cycle (`"2": {"Sat": {…}}`). The
-  workbook shows the template week; overrides feed batch balance and shopping, and should be
-  mentioned in `meta.workbook_notes`.
+- `week_overrides` replaces whole days in specific weeks of the cycle (`"2": {"Sat": {…}}`).
+  Overrides are first-class: `mealplan.py check` evaluates every actual day of the cycle (labels like
+  `Sat (wk 2, 4)`), micronutrient averages and maxima cover all `weeks × 7` days, and the workbook
+  gets one extra day sheet per distinct override (`Sat wk2+4`; identical overrides in several weeks
+  share a sheet) plus a cycle calendar on the Week summary.
 
 ## cycle
 
@@ -148,6 +175,10 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   before the recipe's first batch of the new cycle is cooked; the check simulates until the freezer
   has converged and reports that peak) or
   `{"mode": "horizon", "cycles": 6}` (no policy; the freezer is verified for that many cycles only).
+- Sessions are identified by an optional `id` (unique) or their position — not by `label`. Two
+  sessions may share a label ("Sunday"); each distinct definition gets its own cook-day page
+  (`cook-sunday-wk1-3.html`, `cook-sunday-wk2-4.html`, titled with the weeks). Definitions that are
+  identical except for their weeks share one page.
 - `cook` maps batch recipe → number of batches. `steps`/`prep`/`notes` feed the cook-day page;
   without `steps` the page lists the recipes in order.
 
@@ -166,7 +197,15 @@ juice per lemon). `shelf_days` makes leftovers expire; `carry: false` forbids ca
   its expiry (`shelf_days`). The check warns when a covered day comes **before** its fresh run ("buy it
   earlier") or **after** the shelf life ("add a fresh run closer to those days") — split fresh runs
   until these warnings are gone.
+- `horizon_cycles` (optional, default ≈ one year: `ceil(52 / weeks)`): how many cycles the shopping list
+  is simulated for. Every cycle in that range has its own computed quantities (`packs_by_cycle`); the
+  page shows nothing beyond it, rather than guessing. The end date is fixed by this number and
+  `cycle.start_date`, so re-rendering an unchanged plan gives the same end: to extend an expired list,
+  raise `horizon_cycles` (to at least the cycle the page reports) and re-render.
 - The engine buys whole packs, reuses leftovers first (FIFO, expired lots dropped), and reports per
   item `packs` for the coming cycle, `packs_by_cycle` (alternating buys) and `lasts_cycles` for slow
-  movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till) and `cycle_cost` /
-  `weekly_cost` (pro-rated steady state — use this for the budget).
+  movers. Cost: `first_cycle_till_cost` (what the first cycle costs at the till), `cycle_cost` /
+  `weekly_cost` (recurring cost — use this for the budget) = `consumed_value_per_cycle` (food eaten,
+  pro-rated per pack, so a slow mover still costs its share every cycle) + `waste_per_cycle` (what
+  is actually thrown away: leftovers with `carry: false` and expired lots, measured in a long
+  simulation). Stock that carries over is neither.

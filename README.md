@@ -36,6 +36,7 @@ SKILL.md                      instructions Claude follows (phases, rules, safety
 scripts/
   targets.py                  energy, macro and micronutrient targets from interview answers
   mealplan.py                 core engine: nutrients, amino-acid scores, batch inventory, shopping, checks
+  energy.py                   energy availability (intake − exercise per kg fat-free mass)
   build_workbook.py           Excel workbook with live formulas (openpyxl)
   render_pages.py             recipe pages, cook-day pages, shopping list (HTML + markdown)
   recalc.py                   recalculate the workbook with headless LibreOffice and list formula errors

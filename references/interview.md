@@ -32,8 +32,10 @@ One call, phrased lightly. These are asked even when every topic is skipped and 
 is otherwise built from defaults:
 - Food allergies or intolerances: none / yes — I'll list them / not sure. "Not sure" or no answer is
   recorded as `unknown`, never as `none`.
-- Age band: under 18 / 18–39 / 40–59 / 60+
+- Age band: under 18 / 18–39 / 40–59 / 60+ (then exact age → `profile.age`; under 18 → the calculator
+  does not produce targets, see SKILL.md Safety)
 - Anything a plan must respect: none / a health condition or medication / pregnant or breastfeeding / prefer to tell in text
+  (pregnant → `profile.pregnant: true`, breastfeeding → `profile.breastfeeding: true`; both route away from the calculator)
 - Do you compete in a drug-tested sport? yes / no
 - Ask about eating-disorder history only if something in the conversation hints at it, and gently.
 

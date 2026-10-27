@@ -3,6 +3,12 @@
   "name": "Example — vegetarian lean-gain plan",
   "athlete": "Example athlete",
   "bw_kg": 87,
+  "ffm_kg": 75.7,
+  "goal": "lean_gain",
+  "exercise_kcal": {
+   "training": 435,
+   "rest": 0
+  },
   "currency": "EUR",
   "country": "DE",
   "freezer_portions": 24,
@@ -144,7 +150,8 @@
    "allergens": [
     "gluten"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "soydrink": {
    "name": "Soy drink, high protein",
@@ -191,7 +198,14 @@
    "allergens": [
     "soy"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant",
+   "fortified_with": [
+    "calcium_mg",
+    "vitD_ug",
+    "riboflavin_mg",
+    "b12_ug"
+   ]
   },
   "isolate": {
    "name": "Soy protein isolate",
@@ -238,7 +252,8 @@
    "allergens": [
     "soy"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "casein": {
    "name": "Micellar casein",
@@ -281,7 +296,8 @@
    "allergens": [
     "milk"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "animal"
   },
   "berries": {
    "name": "Mixed berries, frozen",
@@ -312,7 +328,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "pumpkin": {
    "name": "Pumpkin seeds",
@@ -359,7 +376,8 @@
    "may_contain": [
     "nuts",
     "peanuts"
-   ]
+   ],
+   "origin": "plant"
   },
   "chia": {
    "name": "Chia seeds",
@@ -401,7 +419,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "hemp": {
    "name": "Hemp seeds, hulled",
@@ -443,7 +462,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "kiwi": {
    "name": "Kiwi",
@@ -474,7 +494,8 @@
     "shelf_days": 10
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "almonds": {
    "name": "Almonds",
@@ -519,7 +540,8 @@
    "allergens": [
     "nuts"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "brazil": {
    "name": "Brazil nuts",
@@ -562,7 +584,8 @@
    "allergens": [
     "nuts"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "rucola": {
    "name": "Rucola",
@@ -608,7 +631,8 @@
     "shelf_days": 4
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "beet": {
    "name": "Beetroot, cooked",
@@ -638,7 +662,8 @@
     "shelf_days": 14
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "redonion": {
    "name": "Red onion",
@@ -665,7 +690,8 @@
     "shelf_days": 21
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "lemon": {
    "name": "Lemon juice",
@@ -693,7 +719,8 @@
     "shelf_days": 14
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "balsamic": {
    "name": "Balsamic vinegar",
@@ -721,7 +748,8 @@
    "allergens": [
     "sulphites"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "dijon": {
    "name": "Dijon mustard",
@@ -749,7 +777,8 @@
    "allergens": [
     "mustard"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "maple": {
    "name": "Maple syrup",
@@ -775,7 +804,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "garlic": {
    "name": "Garlic",
@@ -802,7 +832,8 @@
     "shelf_days": 30
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "salt": {
    "name": "Iodised salt",
@@ -829,7 +860,11 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other",
+   "fortified_with": [
+    "iodine_ug"
+   ]
   },
   "rice": {
    "name": "Basmati rice, dry",
@@ -871,7 +906,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "water": {
    "name": "Water",
@@ -912,7 +948,8 @@
     "nitrate_mg": 0
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   },
   "lentils": {
    "name": "Red lentils, split",
@@ -959,7 +996,8 @@
    "allergens": [],
    "may_contain": [
     "gluten"
-   ]
+   ],
+   "origin": "plant"
   },
   "chunks": {
    "name": "Soy chunks, dry",
@@ -1004,7 +1042,8 @@
    "allergens": [
     "soy"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "onion": {
    "name": "Onion",
@@ -1031,7 +1070,8 @@
     "shelf_days": 30
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "ginger": {
    "name": "Ginger",
@@ -1058,7 +1098,8 @@
     "shelf_days": 21
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "tomatoes": {
    "name": "Chopped tomatoes, tinned",
@@ -1100,7 +1141,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "spinach": {
    "name": "Leaf spinach, frozen",
@@ -1147,7 +1189,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "oil": {
    "name": "Olive oil",
@@ -1174,7 +1217,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "garam": {
    "name": "Garam masala",
@@ -1203,7 +1247,8 @@
    "may_contain": [
     "mustard",
     "celery"
-   ]
+   ],
+   "origin": "plant"
   },
   "turmeric": {
    "name": "Turmeric",
@@ -1230,7 +1275,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "cumin": {
    "name": "Cumin, ground",
@@ -1257,7 +1303,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "kidney": {
    "name": "Kidney beans, drained",
@@ -1299,7 +1346,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "blackbeans": {
    "name": "Black beans, drained",
@@ -1339,7 +1387,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "pepper": {
    "name": "Red pepper",
@@ -1368,7 +1417,8 @@
     "shelf_days": 10
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "tpaste": {
    "name": "Tomato paste",
@@ -1394,7 +1444,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "paprika": {
    "name": "Smoked paprika",
@@ -1420,7 +1471,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "chili": {
    "name": "Chili flakes",
@@ -1446,7 +1498,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "cocoa": {
    "name": "Cocoa powder",
@@ -1476,7 +1529,8 @@
    "allergens": [],
    "may_contain": [
     "milk"
-   ]
+   ],
+   "origin": "plant"
   },
   "yeast": {
    "name": "Nutritional yeast flakes",
@@ -1517,7 +1571,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "fungal"
   },
   "stock": {
    "name": "Vegetable stock powder",
@@ -1545,7 +1600,8 @@
    "allergens": [
     "celery"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "chickpeas": {
    "name": "Chickpeas, drained",
@@ -1587,7 +1643,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "sweetpotato": {
    "name": "Sweet potato",
@@ -1616,7 +1673,8 @@
     "shelf_days": 21
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "cauli": {
    "name": "Cauliflower, frozen",
@@ -1643,7 +1701,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "coconut": {
    "name": "Coconut milk, light",
@@ -1669,7 +1728,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "curry": {
    "name": "Red curry paste",
@@ -1698,7 +1758,8 @@
    "may_contain": [
     "crustaceans",
     "fish"
-   ]
+   ],
+   "origin": "plant"
   },
   "carrot": {
    "name": "Carrot",
@@ -1726,7 +1787,8 @@
     "shelf_days": 21
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "celery": {
    "name": "Celery stalk",
@@ -1756,7 +1818,8 @@
    "allergens": [
     "celery"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "passata": {
    "name": "Passata",
@@ -1796,7 +1859,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "oregano": {
    "name": "Oregano, dried",
@@ -1822,7 +1886,8 @@
     "store": "REWE"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "spaghetti": {
    "name": "Whole-wheat spaghetti, dry",
@@ -1870,7 +1935,8 @@
    "may_contain": [
     "eggs",
     "soy"
-   ]
+   ],
+   "origin": "plant"
   },
   "avocado": {
    "name": "Avocado",
@@ -1901,7 +1967,8 @@
     "shelf_days": 5
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "walnuts": {
    "name": "Walnuts",
@@ -1943,7 +2010,8 @@
    "allergens": [
     "nuts"
    ],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "applejuice": {
    "name": "Apple juice",
@@ -1970,7 +2038,8 @@
     "shelf_days": 60
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "plant"
   },
   "glycerol": {
    "name": "Glycerol 99.5 %",
@@ -1996,7 +2065,8 @@
     "store": "online"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   },
   "citrulline": {
    "name": "Citrulline malate 2:1",
@@ -2022,7 +2092,8 @@
     "store": "online"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   },
   "betaalanine": {
    "name": "Beta-alanine",
@@ -2048,7 +2119,8 @@
     "store": "online"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   },
   "taurine": {
    "name": "Taurine",
@@ -2074,7 +2146,8 @@
     "store": "online"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   },
   "creatine": {
    "name": "Creatine monohydrate",
@@ -2100,7 +2173,8 @@
     "store": "online"
    },
    "allergens": [],
-   "may_contain": []
+   "may_contain": [],
+   "origin": "other"
   }
  },
  "recipes": {

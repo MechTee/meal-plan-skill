@@ -18,11 +18,20 @@ INTERNAL = {
                          'String(left%60).padStart(2,"0")', "ce/t*100", "dCls", "fe/t*100", "i+1", "inner", "lCls", "label", "m", "pCls",
                          "pe/t*100", "rows", "s", "shown", "w", "n===state.variant", 'on?" done":""', 'on?"checked":""',
                          'k===sc.limiting && s<100 ?"lim":""', 'shown==="–"?"no data":fmt(pct)+" %"', "i",
-                         'D.aaNote ? " " + esc(D.aaNote) : ""'},   # escaped inside the conditional
+                         'D.aaNote ? " " + esc(D.aaNote) : ""',   # escaped inside the conditional
+                         # allergy banner (#2): constant class names and labels chosen by the level
+                         'a.level === "warn" ? "warn" : ""', 'a.level === "warn" ? "⚠ Allergy check: " : "Allergies: "',
+                         # #19: aria-labelledby ids built in the page from loop indices ("ing-n3 ing-a3")
+                         "labelledby"},
     "shopping_list.html": {"W", "b.dataset.clear", "bits.join(\" · \")", "body", "c", "c===state.cycle", "cb.dataset.run", "done",
                            "fmtDate(r.d)", 'isDone?" done":""', 'isNext?" next":""', "items.length", "items.length?done/items.length*100:0",
                            "k", "k===state.filter", "l", 'on?" done":""', 'on?"checked":""', "open", "qty", "r.id", 'skip?"disabled":""',
                            'skip?"skip":""', "state.cycle", "sub",
+                           'a.level === "warn" ? "warn" : ""', 'a.level === "warn" ? "⚠ Allergy check: " : "Allergies: "',
+                           "d.dataset.run",   # #20: a JS object key for the open/closed state, never markup
+                           "boxes.length", "boxes.length ? done / boxes.length * 100 : 0",   # #20: counts of checkboxes
+                           "idx", "uid++", "id",   # #19: DOM ids for aria-labelledby, built from counters ("r0i12")
+                           "H",   # #22: the horizon in cycles, Number(S.horizon) || 1
                            # dates formatted by the browser from Date objects; numbers coerced with num()
                            'a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})',
                            'b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})',

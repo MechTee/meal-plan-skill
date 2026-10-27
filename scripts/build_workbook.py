@@ -75,6 +75,11 @@ def ingredient_ids(plan):
     return ids
 
 
+def q(sheet):
+    """Sheet reference usable in a formula (quoted when it contains spaces or symbols)."""
+    return sheet if sheet.isalnum() else "'" + sheet.replace("'", "''") + "'"
+
+
 def ing_rng(col):
     c = L(col)
     return f"Ingredients!${c}${ING_FIRST}:${c}${ING_LAST}"
@@ -138,21 +143,40 @@ def build_ingredients(wb, plan):
     return rows
 
 
-def day_title(plan, day):
-    """Sheet title of a template day, e.g. "Wednesday — Training (legs)" — also the day heading on Micros/EAA."""
-    d = plan["days"][day]
+def day_title(plan, day, d=None):
+    """Sheet title of a day, e.g. "Wednesday — Training (legs)" — also the day heading on Micros/EAA.
+    `d` is the day definition (a week override); default is the template day."""
+    d = d or plan["days"][day]
     title = f"{M.DAYNAMES[day]} — {d.get('type', 'training').capitalize()}"
     if d.get("label") and d["label"] != M.DAYNAMES[day]:
         title += d["label"][len(M.DAYNAMES[day]):]
     return title
 
 
-def build_day(wb, plan, day):
-    d = plan["days"][day]
-    ws = wb.create_sheet(day)
+def weeks_suffix(plan, weeks):
+    """"" for a definition used every week, else " · week 2" / " · weeks 2, 4"."""
+    W = M.cycle_weeks(plan)
+    weeks = weeks or list(range(1, W + 1))
+    return "" if len(weeks) == W else f" · week{'s' if len(weeks) > 1 else ''} {', '.join(map(str, weeks))}"
+
+
+def day_heading(plan, group):
+    """(title, row label) of one day_groups() entry — the day sheet's A1, the Micros/EAA heading and the
+    Week summary row. check_workbook uses the same function, so the two cannot drift apart."""
+    wk = weeks_suffix(plan, group["weeks"])
+    return day_title(plan, group["day"], group["def"]) + wk, M.DAYNAMES[group["day"]] + wk
+
+
+def build_day(wb, plan, day, d=None, sheet=None, weeks=None):
+    """One day sheet. Template days use plan.days; week overrides get their own sheet ("Sat wk2+4")."""
+    W = M.cycle_weeks(plan)
+    d = d or plan["days"][day]
+    weeks = weeks or list(range(1, W + 1))
+    sheet = sheet or day
+    ws = wb.create_sheet(sheet)
     T = plan.get("targets", {})
     t = T.get(d.get("type", "training"), {})
-    title = day_title(plan, day)
+    title, row_label = day_heading(plan, {"day": day, "def": d, "weeks": weeks})
     put(ws, "A1", title, bold=True, size=13)
     free = T.get("free_kcal")
     put(ws, "A2", f"Target: {t.get('kcal', 0):,} kcal planned" + (f" (+{free} free)" if free else "") +
@@ -224,7 +248,8 @@ def build_day(wb, plan, day):
         ws.column_dimensions[L(i)].width = 11
     ws.row_dimensions[4].height = 30
     ws.freeze_panes = "B5"
-    return {"sheet": day, "meals": meals, "total": tot, "type": d.get("type", "training"), "title": title}
+    return {"sheet": sheet, "day": day, "weeks": weeks, "meals": meals, "total": tot, "type": d.get("type", "training"),
+            "title": title, "row_label": row_label}
 
 
 def build_micros(wb, plan, days):
@@ -233,7 +258,7 @@ def build_micros(wb, plan, days):
     put(ws, "A2", "Live formulas: grams on each day sheet × per-100 g values on the Ingredients sheet. Empty ingredient cells count as 0, "
                   "so a nutrient with missing data reads low — check the Ingredients sheet before acting on a gap.", color=GREY, italic=True)
     r = 4
-    totals = {}
+    totals, gaps = {}, {}
     for dinfo in days:
         put(ws, f"A{r}", dinfo["title"], bold=True)
         r += 1
@@ -248,7 +273,7 @@ def build_micros(wb, plan, days):
             sh = dinfo["sheet"]
             for j, k in enumerate(MICRO_KEYS):
                 put(ws, f"{L(2 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{q(sh)}!$D${m['first']}:$D${m['last']},{ing_rng(MIC0 + j)}),{q(sh)}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.0#")
             r += 1
         put(ws, f"A{r}", "Day total", bold=True, fill=TOT_FILL)
@@ -256,12 +281,24 @@ def build_micros(wb, plan, days):
             col = L(2 + j)
             put(ws, f"{col}{r}", f"=SUM({col}{first}:{col}{r - 1})", bold=True, fmt="0.0#", fill=TOT_FILL)
         totals[dinfo["sheet"]] = r
-        r += 2
+        # data coverage: grams of the day's food whose Ingredients cell for this nutrient is empty
+        sh, last = dinfo["sheet"], dinfo["total"] - 1
+        put(ws, f"A{r + 1}", "Food without a value (g)", color=GREY, italic=True)
+        put(ws, f"A{r + 2}", "Share of the day's food without a value", color=GREY, italic=True)
+        for j, _ in enumerate(MICRO_KEYS):
+            col = L(2 + j)
+            put(ws, f"{col}{r + 1}",
+                f"=SUMPRODUCT(COUNTIFS({ing_rng(IDC)},{q(sh)}!$D$5:$D${last},{ing_rng(MIC0 + j)},\"\")*{q(sh)}!$C$5:$C${last})", fmt="0", color=GREY)
+            put(ws, f"{col}{r + 2}", f"=IFERROR({col}{r + 1}/SUM({q(sh)}!$C$5:$C${last}),0)", fmt="0%", color=GREY)
+        gaps[dinfo["sheet"]] = r + 2
+        ws.conditional_formatting.add(f"B{r + 2}:{L(1 + len(MICRO_KEYS))}{r + 2}",
+                                      CellIsRule(operator="greaterThan", formula=["0.01"], font=Font(name=FONT, color="B26B00", bold=True)))
+        r += 4
     ws.column_dimensions["A"].width = 30
     for j in range(len(MICRO_KEYS)):
         ws.column_dimensions[L(2 + j)].width = 12
     ws.freeze_panes = "B4"
-    return totals
+    return totals, gaps
 
 
 def build_eaa(wb, plan, days):
@@ -283,10 +320,10 @@ def build_eaa(wb, plan, days):
         sh = dinfo["sheet"]
         for m in dinfo["meals"]:
             put(ws, f"A{r}", m["name"])
-            put(ws, f"B{r}", f"={sh}!F{m['sub']}", color=GREEN, fmt="0.0")
+            put(ws, f"B{r}", f"={q(sh)}!F{m['sub']}", color=GREEN, fmt="0.0")
             for j, a in enumerate(AA_KEYS):
                 put(ws, f"{L(3 + j)}{r}",
-                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{sh}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{sh}!$C${m['first']}:$C${m['last']})/100",
+                    f"=SUMPRODUCT(SUMIF({ing_rng(IDC)},{q(sh)}!$D${m['first']}:$D${m['last']},{ing_rng(AA0 + j)}),{q(sh)}!$C${m['first']}:$C${m['last']})/100",
                     fmt="0.00")
             put(ws, f"N{r}", f"=SUM(C{r}:M{r})", fmt="0.0")
             put(ws, f"O{r}", f'=IF(B{r}<10,"–",IF(E{r}>=2.5,"yes","no"))')
@@ -305,12 +342,20 @@ def build_eaa(wb, plan, days):
     return totals
 
 
-def build_week(wb, plan, days, mic_tot, eaa_tot):
+def weighted(col, first_row, days, W, per_week=False):
+    """Cycle-weighted average of a column: each row counts once per week that uses it."""
+    terms = "+".join(f"{col}{first_row + i}*{len(d['weeks'])}" for i, d in enumerate(days))
+    return f"=({terms})/{W}" if per_week else f"=({terms})/{7 * W}"
+
+
+def build_week(wb, plan, days, mic_tot, eaa_tot, mic_gap=None):
     ws = wb["Week summary"]
     T = plan.get("targets", {})
     put(ws, "A1", "Week summary — nutrients per day", bold=True, size=13)
+    W = M.cycle_weeks(plan)
     put(ws, "A2", "Day values link to the day sheets (green). Blue = targets from the plan plus general references "
-                  "(fiber ≥ 30 g, salt ≤ 6 g).", color=GREY, italic=True)
+                  f"(fiber ≥ 30 g, salt ≤ 6 g). Days changed in some weeks of the {W}-week cycle have their own rows and sheets; "
+                  "averages are over every day of the cycle.", color=GREY, italic=True)
     notes = plan.get("meta", {}).get("workbook_notes", [])
     alerts = M.allergy_alerts(plan)
     if alerts:  # the allergy line takes row 3; plan notes move up beside the legend
@@ -328,10 +373,10 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     for dinfo in days:
         sh, tot = dinfo["sheet"], dinfo["total"]
         t = T.get(dinfo["type"], {})
-        put(ws, f"A{r}", M.DAYNAMES[sh])
+        put(ws, f"A{r}", dinfo["row_label"])
         put(ws, f"B{r}", dinfo["type"].capitalize())
         for j, (_, _, fmt) in enumerate(MAC_COLS):
-            put(ws, f"{L(3 + j)}{r}", f"={sh}!{L(5 + j)}{tot}", color=GREEN, fmt=fmt)
+            put(ws, f"{L(3 + j)}{r}", f"={q(sh)}!{L(5 + j)}{tot}", color=GREEN, fmt=fmt)
         put(ws, f"K{r}", t.get("kcal"), color=BLUE, fmt="#,##0")
         put(ws, f"L{r}", f"=C{r}-K{r}", fmt="+#,##0;-#,##0;0")
         put(ws, f"M{r}", t.get("protein_g"), color=BLUE)
@@ -339,10 +384,29 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
         put(ws, f"O{r}", T.get("fiber_min", 30), color=BLUE)
         put(ws, f"P{r}", T.get("salt_max", 6), color=BLUE)
         r += 1
-    put(ws, f"A{r}", "Week average", bold=True, fill=TOT_FILL)
+    put(ws, f"A{r}", "Cycle average (per day)", bold=True, fill=TOT_FILL)
     for c in range(3, 15):
         col = L(c)
-        put(ws, f"{col}{r}", f"=AVERAGE({col}5:{col}{r - 1})", bold=True, fmt="#,##0" if c in (3, 11, 12) else "0", fill=TOT_FILL)
+        put(ws, f"{col}{r}", weighted(col, 5, days, W), bold=True, fmt="#,##0" if c in (3, 11, 12) else "0", fill=TOT_FILL)
+    top_rows = {dinfo["sheet"]: 5 + i for i, dinfo in enumerate(days)}
+
+    # calendar of the whole cycle: which definition each actual day uses
+    for title, col, fmt in (("Cycle calendar — kcal per day", "C", "#,##0"), ("Cycle calendar — protein g per day", "D", "0")):
+        r += 3
+        put(ws, f"A{r}", title, bold=True, size=12)
+        r += 1
+        put(ws, f"A{r}", "Week", bold=True, fill=HDR_FILL)
+        for i, day in enumerate(M.WEEKDAYS):
+            put(ws, f"{L(2 + i)}{r}", day, bold=True, fill=HDR_FILL)
+        put(ws, f"I{r}", "Average", bold=True, fill=HDR_FILL)
+        r += 1
+        for w in range(1, W + 1):
+            put(ws, f"A{r}", f"Week {w}")
+            for i, day in enumerate(M.WEEKDAYS):
+                dinfo = next(x for x in days if x["day"] == day and w in x["weeks"])
+                put(ws, f"{L(2 + i)}{r}", f"={col}{top_rows[dinfo['sheet']]}", color=BLACK, fmt=fmt)
+            put(ws, f"I{r}", f"=AVERAGE(B{r}:H{r})", fmt=fmt)
+            r += 1
     ws.conditional_formatting.add(f"L5:L{r - 1}", FormulaRule(formula=["ABS(L5)>0.05*K5"], font=Font(name=FONT, color="C00000", bold=True)))
     ws.conditional_formatting.add(f"I5:I{r - 1}", FormulaRule(formula=["I5<O5"], font=Font(name=FONT, color="C00000", bold=True)))
 
@@ -357,33 +421,102 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     r += 1
     m0 = r
     for dinfo in days:
-        put(ws, f"A{r}", M.DAYNAMES[dinfo["sheet"]])
+        put(ws, f"A{r}", dinfo["row_label"])
         for j, _ in enumerate(MICRO_KEYS):
             put(ws, f"{L(2 + j)}{r}", f"=Micros!{L(2 + j)}{mic_tot[dinfo['sheet']]}", color=GREEN, fmt="0.0#")
         r += 1
     m1 = r - 1
     mt = T.get("micros", {})
     rows = {}
-    for label, key, color in (("Food average", None, BLACK), ("Supplements / day", "supplement", BLUE), ("Average incl. supplements", None, BLACK),
+    for label, key, color in (("Food average (cycle)", None, BLACK), ("Supplements / day", "supplement", BLUE), ("Average incl. supplements", None, BLACK),
                               ("Floor (reference)", "floor", BLUE), ("Aim (athlete)", "aim", BLUE), ("Upper limit", "ul", BLUE), ("% of aim", None, BLACK)):
         put(ws, f"A{r}", label, bold=True)
         rows[label] = r
         for j, k in enumerate(MICRO_KEYS):
             col = L(2 + j)
-            if label == "Food average":
-                put(ws, f"{col}{r}", f"=AVERAGE({col}{m0}:{col}{m1})", fmt="0.0#")
+            if label == "Food average (cycle)":
+                put(ws, f"{col}{r}", weighted(col, m0, days, W), fmt="0.0#")
             elif label == "Average incl. supplements":
-                put(ws, f"{col}{r}", f"={col}{rows['Food average']}+N({col}{rows['Supplements / day']})", fmt="0.0#")
+                put(ws, f"{col}{r}", f"={col}{rows['Food average (cycle)']}+N({col}{rows['Supplements / day']})", fmt="0.0#")
             elif label == "% of aim":
                 put(ws, f"{col}{r}", f"=IF(N({col}{rows['Aim (athlete)']})=0,\"\",{col}{rows['Average incl. supplements']}/{col}{rows['Aim (athlete)']})", fmt="0%")
             else:
                 v = (mt.get(k) or {}).get(key)
+                if key == "ul":
+                    lims = M.limits_of(mt.get(k) or {})
+                    forms = [x for x in lims if x["basis"] != "total"]
+                    total = next((x["ul"] for x in lims if x["basis"] == "total"), None)
+                    if forms:
+                        # form-specific limits apply to one form only, so they are not compared with the total here;
+                        # the Status row checks the live supplement against them and never reads plain "ok"
+                        text = " · ".join(f"{x['ul']:g} ({M.FORMS.get(x['basis'], (0, x['basis']))[1]})" for x in forms)
+                        c = put(ws, f"{col}{r}", total if total is not None else text,
+                                color=BLUE if total is not None else GREY, italic=total is None, wrap=True)
+                        c.comment = Comment(("Total limit in this cell; also " if total is not None else "") +
+                                            f"form-specific limit(s): {text}. These apply only to the named form "
+                                            "(supplements/fortified foods for added folate — folic acid + 5-MTHF — added "
+                                            "magnesium and niacin forms; preformed retinol for vitamin A), not to the total. "
+                                            "The Status row flags a supplement that alone exceeds one; everything else is "
+                                            "checked by mealplan.py check.", "plan")
+                        continue
                 if v is not None:
                     c = put(ws, f"{col}{r}", v, color=color)
                     note = (mt.get(k) or {}).get("supplement_note") if key == "supplement" else None
                     if note:
                         c.comment = Comment(note, "plan")
         r += 1
+    # data completeness: missing values count as 0, so with gaps the average is only a lower bound
+    put(ws, f"A{r}", "Food without a value (max share of a day)", bold=True)
+    rows["gap"] = r
+    for j, _ in enumerate(MICRO_KEYS):
+        col = L(2 + j)
+        put(ws, f"{col}{r}", "=MAX(" + ",".join(f"Micros!{col}{mic_gap[d['sheet']]}" for d in days) + ")", fmt="0%")
+    r += 1
+    put(ws, f"A{r}", "Status", bold=True)
+    rows["status"] = r
+    try:
+        engine = {x["key"]: x for x in M.compute(plan)["checks"]["micros"]}
+    except Exception:   # the workbook must still build; the Status comment then just omits the engine verdict
+        engine = {}
+    for j, k in enumerate(MICRO_KEYS):
+        col = L(2 + j)
+        avg, peak = f"{col}{rows['Average incl. supplements']}", f"(MAX({col}{m0}:{col}{m1})+N({col}{rows['Supplements / day']}))"
+        fl, aim, ul, gp = (f"N({col}{rows['Floor (reference)']})", f"N({col}{rows['Aim (athlete)']})",
+                           f"N({col}{rows['Upper limit']})", f"{col}{rows['gap']}")
+        supp = f"N({col}{rows['Supplements / day']})"
+        # gp > 0.01 words the MINIMUM side as a lower bound; a total UL is only "within" when gp = 0 exactly —
+        # a few grams of a concentrated source without a value can carry the total over the limit
+        base = (f'IF(AND({fl}=0,{aim}=0,{ul}=0),IF({gp}>0.01,"≥ (no target)","no target"),'
+                f'IF(AND({ul}>0,{peak}>{ul}),"ABOVE UL",IF({gp}>0.01,'
+                f'IF({avg}<MAX({fl},{aim}),"≥ known part below "&IF({avg}<{fl},"floor","aim")&IF({ul}>0," · UL unverified",""),'
+                f'IF({ul}>0,"≥ aim · UL unverified","≥ aim (lower bound)")),'
+                f'IF(AND({ul}>0,{gp}>0),IF({avg}<{fl},"below floor · UL unverified",IF({avg}<{aim},"below aim · UL unverified","UL unverified")),'
+                f'IF({avg}<{fl},"below floor",IF({avg}<{aim},"below aim","ok"))))))')
+        forms = [x for x in M.limits_of((mt.get(k) or {})) if x["basis"] != "total"]
+        if forms:
+            # Form-specific limits: the supplement alone is a live lower bound of the form where every
+            # supplement of the nutrient is that form (magnesium, folate) — above the limit is then certain.
+            # Anything short of that cannot be confirmed from this sheet, so the status never reads "ok".
+            # SUBSTITUTE turns "ok · form UL unchecked" into "form UL unchecked"; no other base string contains "ok · ".
+            formula = f'SUBSTITUTE({base}&" · form UL unchecked","ok · ","")'
+            for x in reversed([x for x in forms if x["basis"] in M.SUPPLEMENT_IS_FORM]):
+                formula = f'IF({supp}>{x["ul"]:g},"ABOVE UL ({M.FORMS[x["basis"]][1]})",{formula})'
+            c = put(ws, f"{col}{r}", "=" + formula, wrap=True)
+            verdict = (engine.get(k) or {}).get("status")
+            c.comment = Comment("Form-specific upper limit(s) are not recalculated in this sheet beyond the supplement "
+                                "row: run mealplan.py check after editing grams or supplements."
+                                + (f" At build, mealplan.py check reported: {verdict}." if verdict else ""), "plan")
+        else:
+            put(ws, f"{col}{r}", "=" + base, wrap=True)
+    ws.row_dimensions[r].height = 42
+    st = f"B{r}:{L(1 + len(MICRO_KEYS))}{r}"
+    ws.conditional_formatting.add(st, FormulaRule(formula=[f'AND(B{r}<>"ok",B{r}<>"no target")'], font=Font(name=FONT, color="B26B00", bold=True)))
+    put(ws, f"A{r + 1}", "“≥”: some food has no value for this nutrient, so the real intake is higher than shown. "
+                         "Upper limits can only be confirmed once those values are filled in on the Ingredients sheet. "
+                         "“form UL unchecked”: a limit for one form (e.g. added magnesium) is not recalculated here — "
+                         "run mealplan.py check.",
+        color=GREY, italic=True)
+    r += 2
     pr = rows["% of aim"]
     rng = f"B{pr}:{L(1 + len(MICRO_KEYS))}{pr}"
     ws.conditional_formatting.add(rng, CellIsRule(operator="lessThan", formula=["0.9"], font=Font(name=FONT, color="C00000", bold=True)))
@@ -401,14 +534,14 @@ def build_week(wb, plan, days, mic_tot, eaa_tot):
     r += 1
     a0 = r
     for dinfo in days:
-        put(ws, f"A{r}", M.DAYNAMES[dinfo["sheet"]])
+        put(ws, f"A{r}", dinfo["row_label"])
         for c in range(2, 14):
             put(ws, f"{L(c)}{r}", f"=EAA!{L(c)}{eaa_tot[dinfo['sheet']]}", color=GREEN, fmt="0.0")
         r += 1
     a1 = r - 1
-    put(ws, f"A{r}", "Week total", bold=True)
+    put(ws, f"A{r}", "Average week (cycle)", bold=True)
     for c in range(2, 14):
-        put(ws, f"{L(c)}{r}", f"=SUM({L(c)}{a0}:{L(c)}{a1})", fmt="0")
+        put(ws, f"{L(c)}{r}", weighted(L(c), a0, days, W, per_week=True), fmt="0")
     wt = r
     r += 2
     put(ws, f"A{r}", "Scoring vs FAO 2013 adult pattern (mg per g protein; unadjusted for digestibility — the cooking pages show the digestibility-corrected estimate)",
@@ -449,11 +582,17 @@ def build(plan, out):
     wb.create_sheet("EAA")
     del wb["Micros"], wb["EAA"]
     build_ingredients(wb, plan)
-    days = [build_day(wb, plan, d) for d in M.WEEKDAYS]
-    mic = build_micros(wb, plan, days)
+    days = []
+    for g in M.day_groups(plan):
+        if g["override"]:
+            sheet = f"{g['day']} wk{'+'.join(map(str, g['weeks']))}"[:31]
+            days.append(build_day(wb, plan, g["day"], d=g["def"], sheet=sheet, weeks=g["weeks"]))
+        else:
+            days.append(build_day(wb, plan, g["day"], weeks=g["weeks"]))
+    mic, gap = build_micros(wb, plan, days)
     eaa = build_eaa(wb, plan, days)
-    build_week(wb, plan, days, mic, eaa)
-    order = ["Week summary", "Micros", "EAA", "Ingredients"] + M.WEEKDAYS
+    build_week(wb, plan, days, mic, eaa, gap)
+    order = ["Week summary", "Micros", "EAA", "Ingredients"] + [d["sheet"] for d in days]
     wb._sheets = [wb[n] for n in order]
     wb.active = 0
     wb.save(out)

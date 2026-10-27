@@ -85,7 +85,7 @@ class SelfContained(unittest.TestCase):
             wb.save(xl)
             p = check()
             self.assertEqual(p.returncode, 1, p.stdout)
-            self.assertIn("Micros Mon", p.stdout)
+            self.assertIn("Micros Monday", p.stdout)
             # remove a day heading: the check reports the unchecked day instead of passing
             wb = load_workbook(xl)
             ws = wb["EAA"]
@@ -94,7 +94,10 @@ class SelfContained(unittest.TestCase):
             wb.save(xl)
             p = check()
             self.assertEqual(p.returncode, 1)
-            self.assertIn("EAA: day totals checked for 6 of 7 days — missing Tue", p.stdout)
+            sys.path.insert(0, SCRIPTS)
+            import mealplan as M
+            n = len(M.day_groups(data))          # template days + week overrides
+            self.assertIn(f"EAA: day totals checked for {n - 1} of {n} days — missing Tuesday", p.stdout)
 
 
 if __name__ == "__main__":

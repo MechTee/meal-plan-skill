@@ -118,14 +118,18 @@ const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const safeUrl = u => { try { const x = new URL(String(u)); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : ""; } catch(e) { return ""; } };
 const cur = S.currency || "EUR";
 const money = v => v == null ? "" : new Intl.NumberFormat(S.locale || "de-DE", {style:"currency", currency:cur}).format(v);
-const DAY = 864e5;
-const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+// Calendar arithmetic on day numbers (days since 1970-01-01 in UTC), never on local milliseconds:
+// a local day is 23 or 25 hours long on daylight-saving changes, so adding n × 24 h can land on the wrong date.
+const dayNum = s => { const [y,m,d] = String(s).split("-").map(Number); return Date.UTC(y, m-1, d) / 864e5; };
+const localDayNum = dt => Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()) / 864e5;
+const fromDayNum = n => { const u = new Date(n * 864e5); return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate()); };
 const W = num(S.cycleWeeks) || 4;
-const today = new Date(); today.setHours(0,0,0,0);
+const todayNum = localDayNum(new Date());
 
-function cycleOf(date){ const c = Math.floor((date - parse(S.runs[0].date)) / (7*W*DAY)) + 1; return Math.max(1, c); }
-let state = Object.assign({ticks:{}, cycle: cycleOf(today), filter:"upcoming"}, store.get());
-const shift = (d, c) => new Date(parse(d).getTime() + (c-1)*7*W*DAY);
+function cycleOf(n){ return Math.max(1, Math.floor((n - dayNum(S.runs[0].date)) / (7*W)) + 1); }
+let state = Object.assign({ticks:{}, cycle: cycleOf(todayNum), filter:"upcoming"}, store.get());
+const shiftNum = (d, c) => dayNum(d) + (c-1)*7*W;          // day number of a run date in cycle c
+const shift = (d, c) => fromDayNum(shiftNum(d, c));        // local Date for display
 const fmtDate = d => d.toLocaleDateString(S.locale || "en-GB", {weekday:"short", day:"numeric", month:"short"});
 
 $("eyebrow").textContent = S.eyebrow || "Shopping list";
@@ -140,9 +144,9 @@ $("readout").innerHTML = `
   <div><b>${money(S.costs.firstTill)}</b><span>first cycle at the till</span></div>`;
 
 function renderCycles(){
-  const n = Math.max(4, state.cycle + 1);
+  const n = Math.min(H, Math.max(4, state.cycle + 1));
   $("cycles").innerHTML = `<span class="eyebrow">Cycle</span>` + Array.from({length:n}, (_,i)=>i+1).map(c => {
-    const a = shift(S.runs[0].date, c), b = new Date(a.getTime() + (7*W-1)*DAY);
+    const a = shift(S.runs[0].date, c), b = fromDayNum(shiftNum(S.runs[0].date, c) + 7*W - 1);
     return `<button class="chip" type="button" aria-pressed="${c===state.cycle}" data-c="${c}">${c} · ${a.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}–${b.toLocaleDateString(S.locale||"en-GB",{day:"numeric",month:"short"})}</button>`;
   }).join("");
   $("cycles").querySelectorAll("button").forEach(b => b.onclick = () => { state.cycle = +b.dataset.c; store.set(state); render(); });
@@ -152,44 +156,72 @@ function renderFilters(){
   $("filters").innerHTML = `<span class="eyebrow">Show</span>` + FILTERS.map(([k,l]) => `<button class="chip" type="button" aria-pressed="${k===state.filter}" data-f="${k}">${l}</button>`).join("");
   $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { state.filter = b.dataset.f; store.set(state); render(); });
 }
+// Quantities exist for every simulated cycle (S.horizon). Beyond that nothing is guessed: the page asks
+// for the plan to be re-rendered instead of reusing the last cycle's numbers.
+const H = Number(S.horizon) || 1;
 function packsFor(it){
   const seq = it.packs_by_cycle || [];
   if (!seq.length) return it.packs;
-  return seq[Math.min(state.cycle-1, seq.length-1)];
+  return state.cycle <= seq.length ? seq[state.cycle-1] : undefined;
 }
 // Runs the user opened or closed by hand, per cycle — kept across re-renders (cycle/filter changes).
 const openState = {};
+// Cost of an item in the selected cycle: that cycle's packs × the unit price. null = price unknown.
+function costFor(it){
+  const p = packsFor(it);
+  if (p === 0) return 0;
+  if (p == null || it.price_each == null) return null;
+  return Math.round(p * Number(it.price_each) * 100) / 100;
+}
+function runCost(r){
+  let total = 0, unpriced = 0;
+  r.items.forEach(it => { const c = costFor(it); if (c == null) unpriced++; else total += c; });
+  return {total: Math.round(total * 100) / 100, unpriced};
+}
 function render(){
   renderCycles(); renderFilters();
-  const runs = S.runs.map(r => ({...r, d: shift(r.date, state.cycle)}));
-  const nextIdx = runs.findIndex(r => r.d >= today);
+  if (state.cycle > H) {
+    // the horizon is fixed by plan.json (shopping.horizon_cycles, counted from cycle.start_date), so re-running
+    // the scripts on the same plan reproduces the same end date — say which setting has to change
+    $("runs").innerHTML = `<p class="desc">This shopping list covers ${H} cycles (until ${esc(S.horizonEnd || "the end of cycle " + H)}). `
+      + `Quantities after that are not computed, so none are shown. To extend it, increase `
+      + `<code>shopping.horizon_cycles</code> in plan.json (now ${H}; at least ${state.cycle} covers this cycle) `
+      + `and re-run the plan scripts — re-running with the plan unchanged gives the same end date.</p>`;
+    return;
+  }
+  const runs = S.runs.map(r => ({...r, n: shiftNum(r.date, state.cycle), d: shift(r.date, state.cycle)}));
+  const nextIdx = runs.findIndex(r => r.n >= todayNum);
   const html = runs.map((r, idx) => {
-    if (state.filter === "upcoming" && r.d < today && idx !== nextIdx) return "";
+    if (state.filter === "upcoming" && r.n < todayNum && idx !== nextIdx) return "";
     if (["stock","batch","fresh"].includes(state.filter) && r.kind !== state.filter) return "";
     const tk = state.ticks[`${state.cycle}:${r.id}`] || {};
     const items = r.items.filter(it => (packsFor(it) ?? 1) > 0);
+    const rc = runCost(r);
     const done = items.filter(it => tk[it.key]).length;
     const groups = {};
     r.items.forEach(it => { (groups[it.category] = groups[it.category] || []).push(it); });
+    let uid = 0;
     const body = Object.entries(groups).map(([g, list]) => `<div class="grp">${esc(g)}</div><ul>` + list.map(it => {
+      const id = `r${idx}i${uid++}`;
       const p = packsFor(it), skip = p === 0, on = !!tk[it.key];
       const qty = skip ? "skip" : (p == null ? `${Math.round(num(it.need))} ${esc(it.unit)}` : `${num(p)} ×`);
       const sub = skip ? `have enough` : (it.pack_label ? esc(it.pack_label) : "");
       const bits = [];
-      if (it.cost && !skip) bits.push(money(it.cost));
+      const c = costFor(it);
+      if (!skip) bits.push(c == null ? "price missing" : money(c));
       if (it.store) bits.push(esc(it.store));
       bits.push(`uses ${Math.round(num(it.need)).toLocaleString()} ${esc(it.unit)}`);
       if (it.alternating) bits.push(esc(it.alternating));
       if (num(it.lasts_cycles) >= 1.5) bits.push(`one pack lasts ~${num(it.lasts_cycles)} cycles`);
       if (it.note) bits.push(esc(it.note));
       if (safeUrl(it.link)) bits.push(`<a href="${esc(safeUrl(it.link))}" target="_blank" rel="noopener">link</a>`);
-      return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-label="Got it"><span class="txt">${esc(it.name)}<span class="note">${bits.join(" · ")}</span></span><span class="qty">${qty}<small>${sub}</small></span></label></li>`;
+      return `<li class="${skip?"skip":""}"><label class="row${on?" done":""}"><input type="checkbox" data-run="${esc(r.id)}" data-k="${esc(it.key)}" ${on?"checked":""} ${skip?"disabled":""} aria-labelledby="${id}n ${id}q" aria-describedby="${id}d"><span class="txt"><span id="${id}n">${esc(it.name)}</span><span class="note" id="${id}d">${bits.join(" · ")}</span></span><span class="qty" id="${id}q">${qty}<small>${sub}</small></span></label></li>`;
     }).join("") + `</ul>`).join("");
     const isNext = idx === nextIdx, isDone = items.length && done === items.length;
     const manual = openState[`${state.cycle}:${r.id}`];
     const open = (manual !== undefined ? manual : (isNext || state.filter !== "upcoming" && state.filter !== "all")) ? "open" : "";
     return `<details class="run${isNext?" next":""}${isDone?" done":""}" data-run="${esc(r.id)}" ${open}>
-      <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(r.cost)}</span></span>
+      <summary><span><span class="date">${fmtDate(r.d)}</span>${isNext?'<span class="tag next">next</span>':''}<span class="tag">${esc(r.kind)}</span><br><span class="when">${esc(r.label)}${r.store?" · "+esc(r.store):""} · ${money(rc.total)}${rc.unpriced ? ` + ${rc.unpriced} without price` : ""}</span></span>
       <span class="prog">${done}/${items.length}</span><span class="meter"><i style="width:${items.length?done/items.length*100:0}%"></i></span></summary>
       <div class="body">${body}<div class="foot"><span>${esc(r.note || "")}</span><button type="button" data-clear="${esc(r.id)}">Clear ticks</button></div></div></details>`;
   }).join("");

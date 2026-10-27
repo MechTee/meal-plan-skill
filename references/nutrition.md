@@ -26,7 +26,11 @@ unsure it is current, check the source (dge.de, efsa.europa.eu) with a quick sea
 - Training day vs rest day: same protein and fat, carbs absorb the difference.
 - Goal adjustment:
   - Cut: 0.5–1.0 % body weight per week (≈ 7 700 kcal per kg); slower the leaner they are.
-    Keep energy availability ≥ 30 kcal/kg FFM/day (≥ 45 ideal); below 30 is RED-S territory.
+    Energy availability (EA) = (intake − exercise energy expenditure) / fat-free mass. Exercise
+    expenditure is the planned sessions above resting ((MET − 1) × kg × h); steps and job activity
+    are not subtracted. Below ~30 kcal/kg FFM/day is associated with REDs (IOC 2023) — revise the
+    plan and screen for symptoms; 30–45 is expected in a cut; ~45 is energy balance in the original
+    female research (men often balance lower). Screening numbers, ±15–25 %, not diagnostic.
   - Lean gain (trained): ≈ 0.25–0.5 % body weight per month → usually +5–10 % kcal.
     Novices can gain faster.
   - Recomposition: maintenance, high protein.
@@ -59,7 +63,7 @@ Three levels per nutrient, per day:
   countries the national reference is usually within a few % — use D-A-CH unless the athlete asks.
 - **Aim** = floor adjusted for the athlete (below). This is what the plan is built to hit.
 - **UL** = EFSA tolerable upper level (or safe level) for total intake, food + supplements, unless
-  the UL is defined for supplements only (magnesium, folic acid, niacin forms).
+  the UL is defined for supplements only (magnesium, supplemental folate, niacin forms).
 
 Athlete adjustments ("a bit higher, depending on nutrient")
 | Nutrient | Aim rule | Why |
@@ -79,7 +83,7 @@ Athlete adjustments ("a bit higher, depending on nutrient")
 Reference values used by `targets.py` — DGE/ÖGE reference values, 3rd edition (2025), adults 25–<51,
 ♂ / ♀ (year of derivation), checked against dge.de on 2026-10-24; UL = EFSA:
 B1 1.2/1.0 (2015) · B2 1.4/1.1 (2015) · niacin 15/12 mg NE (2015) · B5 5 (2021) · B6 1.6/1.4 (2019; UL 12) ·
-biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg folic acid) · B12 4.0 µg (2018) ·
+biotin 40 µg (2020) · folate 300 µg folate equivalents (2015; UL 1 000 µg supplemental folic acid + 5-MTHF) · B12 4.0 µg (2018) ·
 K 4 000 (2016) · **P 550** (2024; was 700) · Mg 350/300 (2021) · Ca 1 000 (2013; UL 2 500) · Zn 11/14/16 ♂,
 7/8/10 ♀ by phytate (2019; UL 25) · **Fe 11 / 16 menstruating, 11 premenopausal without menstruation, 14 after menopause** (2023; EFSA safe level 40) ·
 Se 70/60 (2015; UL 255) · **I 150** (2025; was 200; UL 600) · vit A 850/700 µg RAE (2020; UL 3 000 retinol) ·
@@ -87,7 +91,13 @@ C 110/95 (2015) · D 20 µg (2012; UL 100) · **E 8 mg** (2024; was 14/12; UL 30
 Na 1 500 mg (2016). Each value's page is linked in `targets.py` (`REF_DATA`) and in its output.
 
 Supplements and ULs: add regular supplements as a daily average (`supplement` in plan.json);
-the check compares food + supplement against UL. Multivitamins on top of a fortified diet often
+the check compares food + supplement against total ULs. Some ULs apply to one form only and are
+modelled as such (`limits` with a form `basis`): magnesium 250 mg covers supplemental/added
+magnesium (not food magnesium); folate 1 000 µg covers folic acid and 5-MTHF salts (methylfolate) from supplements and fortified
+foods combined (EFSA 2023), not natural food folate; vitamin A 3 000 µg
+covers preformed retinol (carotenoids from plants do not count); niacin 900 mg nicotinamide and
+10 mg nicotinic acid. Record the supplement's form (`supplement_forms`); if it is unknown the check
+says "unresolved". Multivitamins on top of a fortified diet often
 push zinc, vitamin A, iodine or selenium toward ULs — check before recommending.
 
 ## 4 · Timing and the training-day chain

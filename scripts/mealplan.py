@@ -10,8 +10,11 @@ CLI:
   python mealplan.py check   plan.json            -> markdown report (targets, micros, batches, cost)
   python mealplan.py compute plan.json out.json   -> computed.json used by the builders
 """
-import json, math, sys, datetime as dt
+import json, math, os, sys, datetime as dt
 from collections import defaultdict, OrderedDict
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import energy
 
 MACROS = ["kcal", "protein_g", "fat_g", "satfat_g", "carb_g", "sugar_g", "fiber_g", "salt_g"]
 MICROS = ["thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "b6_mg", "biotin_ug",
@@ -19,6 +22,25 @@ MICROS = ["thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "b6_mg",
           "zinc_mg", "iron_mg", "selenium_ug", "iodine_ug", "vitA_rae_ug", "vitC_mg", "vitD_ug",
           "vitE_mg", "vitK_ug", "sodium_mg", "nitrate_mg"]
 NUTRIENTS = MACROS + MICROS
+# Nutrient forms that carry their own upper limits (EFSA): form key -> (parent nutrient, label).
+# Values are part of the parent total; per100 may give them explicitly. When absent they default to 0
+# only where that is certain (see form_value); otherwise they are unknown and limits stay unresolved.
+FORMS = OrderedDict([
+    ("retinol_ug", ("vitA_rae_ug", "preformed vitamin A (retinol)")),
+    # EFSA 2023: the 1,000 µg UL covers the COMBINED supplemental intake of folic acid and the 5-MTHF salts
+    # (L-5-MTHF calcium, (6S)-5-MTHF glucosamine), from supplements and fortified foods — not food folate
+    ("folate_added_ug", ("folate_ug", "added/supplemental folate (folic acid + 5-MTHF)")),
+    ("magnesium_added_mg", ("magnesium_mg", "added/supplemental magnesium")),
+    ("nicotinamide_mg", ("niacin_mg", "nicotinamide")),
+    ("nicotinic_acid_mg", ("niacin_mg", "nicotinic acid")),
+])
+FORM_KEYS = list(FORMS)
+# supplement forms that follow from the nutrient itself: every magnesium supplement is supplemental
+# magnesium, and every folate supplement (folic acid or a 5-MTHF salt) is supplemental folate
+SUPPLEMENT_IS_FORM = {"magnesium_added_mg", "folate_added_ug"}
+# older plan files: `folic_acid_ug` was the folate limit's basis (read as the combined form) and a per100 key
+# (read as a known PART of added folate only — it cannot rule out added 5-MTHF; see form_amount)
+LEGACY_FORMS = {"folic_acid_ug": "folate_added_ug"}
 AAS = ["his", "ile", "leu", "lys", "met", "cys", "phe", "tyr", "thr", "trp", "val"]
 # FAO 2013 scoring pattern, older child/adolescent/adult, mg per g protein
 FAO = {"his": 16, "ile": 30, "leu": 61, "lys": 48, "saa": 23, "aaa": 41, "thr": 25, "trp": 6.6, "val": 40}
@@ -110,6 +132,12 @@ def validate(plan):
     missing = [d for d in WEEKDAYS if d not in plan.get("days", {})]
     if missing:
         errs.append(f"days missing from template week: {missing}")
+    fz = plan.get("meta", {}).get("freezer_portions")
+    if fz is not None and (isinstance(fz, bool) or not isinstance(fz, (int, float)) or fz < 0):
+        errs.append("meta.freezer_portions must be a number ≥ 0 (0 = no freezer) or left out (capacity not checked)")
+    sids = [x["id"] for x in plan.get("cycle", {}).get("sessions", []) if x.get("id")]
+    if len(sids) != len(set(sids)):
+        errs.append("cycle.sessions: session ids must be unique")
     sd = plan.get("cycle", {}).get("start_date")
     if sd and dt.date.fromisoformat(sd).weekday() != 0:
         errs.append("cycle.start_date must be a Monday (week 1, day 1)")
@@ -132,10 +160,61 @@ def ing_nutrients(ingr, grams):
             missing[k] = grams
         else:
             out[k] = v * grams / 100.0
+    for fk in FORM_KEYS:
+        known, complete = form_amount(ingr, fk)
+        out[fk] = known * grams / 100.0      # a known part counts even when the rest is unknown …
+        if not complete:
+            missing[fk] = grams                # … but the limit stays unresolved unless that part alone exceeds it
     aa = ingr.get("aa") or {}
     aa_out = {a: (aa.get(a) or 0.0) * grams / 100.0 for a in AAS}
     dig = ingr.get("digestibility", 0.85)
     return out, missing, aa_out, dig
+
+
+def form_amount(ingr, fk):
+    """(known per-100 amount of a nutrient form, complete?). complete=False means the true amount may be
+    higher than `known` (0 when nothing is known), so a limit on that form cannot be confirmed.
+
+    - given in per100 → that value, complete
+    - legacy `folic_acid_ug` for added folate → a KNOWN PART only: folic acid says nothing about added
+      5-MTHF, so the combined amount stays open unless no folate was added at all (PR #48 review)
+    - otherwise form_value() below: a value → complete, None → (0, incomplete)"""
+    p = ingr["per100"]
+    if p.get(fk) is not None:
+        return float(p[fk]), True
+    parent = FORMS[fk][0]
+    for old, new in LEGACY_FORMS.items():
+        if new == fk and p.get(old) is not None and p.get(parent) != 0:
+            fortified = ingr.get("fortified") is True or parent in (ingr.get("fortified_with") or [])
+            if not fortified and p[old] == 0:
+                return 0.0, True             # nothing added, and folate forms only occur when added
+            return float(p[old]), False      # folic acid known; added 5-MTHF unknown
+    v = form_value(ingr, fk)
+    return (0.0, False) if v is None else (float(v), True)
+
+
+def form_value(ingr, fk):
+    """Per-100 amount of a nutrient form, or None when it cannot be known (legacy keys: see form_amount).
+
+    - given in per100 → that value
+    - parent nutrient known to be 0 → 0
+    - retinol: plant and fungal foods contain none (their vitamin A is carotenoids), nor do
+      non-food ingredients (origin "other": water, salt, pure compounds) → 0
+    - added folate, added magnesium, nicotinamide, nicotinic acid only occur when added: 0 unless the
+      ingredient lists the parent nutrient in `fortified_with` (or is marked `"fortified": true`)
+    """
+    p = ingr["per100"]
+    if p.get(fk) is not None:
+        return p[fk]
+    parent = FORMS[fk][0]
+    if p.get(parent) == 0:
+        return 0.0
+    fortified = ingr.get("fortified") is True or parent in (ingr.get("fortified_with") or [])
+    if fk == "retinol_ug":
+        if ingr.get("origin") in ("plant", "fungal", "other") and not fortified:
+            return 0.0
+        return None
+    return None if fortified else 0.0
 
 
 class Acc:
@@ -184,8 +263,15 @@ class Acc:
 
     def export(self, nd=3):
         return {"n": {k: round(self.n.get(k, 0.0), nd) for k in NUTRIENTS},
+                "forms": {k: round(self.n.get(k, 0.0), nd) for k in FORM_KEYS},
                 "aa": {a: round(self.aa.get(a, 0.0), nd) for a in AAS},
-                "score": self.score(), "mshare": self.mshare()}
+                "score": self.score(), "mshare": self.mshare(),
+                # unfiltered and unrounded: grams of food with an unknown amount of each form. mshare is for
+                # display and drops shares ≤ 0.1 %; limit checks must see even a pinch of a fortified food.
+                "form_missing_g": {k: self.miss[k] for k in FORM_KEYS if self.miss.get(k, 0) > 0},
+                # the same for every nutrient: a total upper limit is only verified when this is 0 — a few
+                # grams of a concentrated source can carry a total over its limit (PR #48 review)
+                "missing_g": {k: self.miss[k] for k in NUTRIENTS if self.miss.get(k, 0) > 0}}
 
 
 def recipe_acc(plan, rkey):
@@ -236,6 +322,30 @@ def fmt_num(x):
 def day_def(plan, week, day):
     ov = plan.get("week_overrides", {}).get(str(week), {})
     return ov.get(day) or plan["days"][day]
+
+
+def day_groups(plan):
+    """Every distinct day definition actually eaten in the cycle.
+
+    Returns, per weekday, one group for the template definition (the weeks that use it) and one
+    group per distinct week override (identical overrides in several weeks are grouped). Each group:
+    {"day", "weeks", "override", "def", "label"}; groups with no weeks are omitted.
+    """
+    W = cycle_weeks(plan)
+    out = []
+    for day in WEEKDAYS:
+        tmpl = plan["days"][day]
+        groups = OrderedDict()
+        for w in range(1, W + 1):
+            d = day_def(plan, w, day)
+            key = "template" if d is tmpl else json.dumps(d, sort_keys=True)
+            g = groups.setdefault(key, {"day": day, "weeks": [], "override": key != "template", "def": d})
+            g["weeks"].append(w)
+        for g in groups.values():
+            all_weeks = len(g["weeks"]) == W
+            g["label"] = day if (all_weeks and not g["override"]) else f"{day} (wk {', '.join(map(str, g['weeks']))})"
+            out.append(g)
+    return out
 
 
 def meal_acc(plan, meal):
@@ -466,13 +576,25 @@ def _buy(ingr):
     return sh.get("buy", "stock")
 
 
-def shopping(plan, cycles=4):
+def horizon_cycles(plan):
+    """How many cycles the shopping list is computed for: shopping.horizon_cycles, else about one year."""
+    h = plan.get("shopping", {}).get("horizon_cycles")
+    return int(h) if h else max(4, math.ceil(52 / cycle_weeks(plan)))
+
+
+def shopping(plan, cycles=None):
     """Dated shopping runs for the coming cycle (cycle 1, dates from cycle.start_date) with pack
     rounding, carry-over of leftovers (FIFO, with expiry from shop.shelf_days) and per-cycle pack
     counts so alternating buys ("2 bags one cycle, 1 the next") and slow movers ("lasts ~3 cycles")
-    are visible. Cost is reported two ways: what cycle 1 costs at the till, and the pro-rated
-    steady-state cost (need / pack size x price) that the weekly budget should use."""
+    are visible. Cost is reported three ways:
+      - first_cycle_till_cost: what cycle 1 costs at the till (includes stocking slow movers)
+      - cycle_cost / weekly_cost: recurring cost = value of the food eaten (need / pack x price, so slow
+        movers keep their share however long a pack lasts) + value of what is thrown away (leftovers
+        with carry: false, lots that expire), measured from the discards in a long simulation. Use this
+        for the budget. Stock that merely carries over is neither cost nor waste.
+      - consumed_value_per_cycle / waste_per_cycle: the two parts."""
     W = cycle_weeks(plan)
+    cycles = cycles or horizon_cycles(plan)   # every cycle the list can show is simulated — nothing is extrapolated
     ING = plan["ingredients"]
     runs = _runs(plan)
     warnings = []
@@ -525,7 +647,9 @@ def shopping(plan, cycles=4):
     # lots[k] = [[grams_left, bought_on, expires_on|None]]; a lot serves a use only if bought_on <= use <= expires_on
     lots = defaultdict(list)
     per_cycle = []
-    for c in range(cycles):
+    discarded = defaultdict(float)          # grams thrown away over the whole simulation
+    horizon = budget_horizon(plan, demand, cycles)
+    for c in range(horizon):
         cyc = {}
         shift = 7 * W * c
         for r in runs:
@@ -537,8 +661,10 @@ def shopping(plan, cycles=4):
                 sh = ING[k].get("shop") or {}
                 shelf = int(sh["shelf_days"]) if sh.get("shelf_days") else None
                 # drop only lots that are empty or expired before this run's earliest use: a run may cover days
-                # before its purchase date, and older lots still serve those days if fresh then
+                # before its purchase date, and older lots still serve those days if fresh then (#9).
+                # Expired grams are thrown away — that is the waste the budget counts (#10).
                 first_use = uses[0][0]
+                discarded[k] += sum(l[0] for l in lots[k] if l[0] > 1e-6 and l[2] is not None and l[2] < first_use)
                 lots[k] = [l for l in lots[k] if l[0] > 1e-6 and (l[2] is None or l[2] >= first_use)]
                 have = sum(l[0] for l in lots[k])
                 # serve from earlier purchases that are still usable on the day of use
@@ -570,9 +696,20 @@ def shopping(plan, cycles=4):
                 leftover = bought - need_new
                 if leftover > 1e-6 and sh.get("carry", True):
                     lots[k].append([leftover, bought_on, expires])
+                elif leftover > 1e-6:
+                    discarded[k] += leftover            # carry: false — the rest of the pack is thrown away
                 cyc[(r["id"], k)] = (packs, have, sum(g for _, g in uses))
         per_cycle.append(cyc)
     need_of = {(rid, k): sum(g for _, g in uses) for rid, dd in demand.items() for k, uses in dd.items()}
+    end = 7 * W * horizon                        # lots already past their date when the simulation ends
+    for k, ls in lots.items():
+        discarded[k] += sum(l[0] for l in ls if l[0] > 1e-6 and l[2] is not None and l[2] < end)
+    waste = 0.0
+    for k, g in discarded.items():
+        price, pack_amt = (ING[k].get("shop") or {}).get("price"), _pack_amount(ING[k])
+        if price is not None and pack_amt:
+            waste += g / pack_amt * price
+    waste /= horizon
 
     out_runs = []
     till = 0.0
@@ -587,7 +724,7 @@ def shopping(plan, cycles=4):
             sh = ingr.get("shop") or {}
             pack_amt = _pack_amount(ingr)
             packs, have, _ = per_cycle[0][(r["id"], k)]
-            seq = [pc[(r["id"], k)][0] for pc in per_cycle]
+            seq = [pc[(r["id"], k)][0] for pc in per_cycle[:cycles]]
             price = sh.get("price")
             it = {"key": k, "name": ingr["name"], "need": round(need, 1), "unit": ingr.get("unit", "g"),
                   "packs": packs, "packs_by_cycle": seq,
@@ -598,7 +735,7 @@ def shopping(plan, cycles=4):
             if r["kind"] == "stock" and pack_amt:
                 it["lasts_cycles"] = round(pack_amt / need, 1) if need else None
                 if len(set(seq)) > 1:
-                    it["alternating"] = f"{min(seq)}–{max(seq)} per cycle (next cycles: {', '.join(str(x) for x in seq)})"
+                    it["alternating"] = f"{min(seq)}–{max(seq)} per cycle (next cycles: {', '.join(str(x) for x in seq[:6])}{', …' if len(seq) > 6 else ''})"
             if price is not None and pack_amt:
                 prorated += need / pack_amt * price
             items.append(it)
@@ -607,8 +744,35 @@ def shopping(plan, cycles=4):
         out_runs.append({**{k: v for k, v in r.items() if k not in ("t", "session")},
                          "date": r["date"].isoformat() if r["date"] else None, "items": items, "cost": cost})
     missing_price = sorted({i["name"] for r in out_runs for i in r["items"] if i["price_each"] is None})
-    return {"runs": out_runs, "first_cycle_till_cost": round(till, 2), "cycle_cost": round(prorated, 2),
-            "weekly_cost": round(prorated / W, 2), "warnings": sorted(set(warnings)), "missing_price": missing_price}
+    recurring = prorated + waste
+    hz_end = run_date(plan, 1, "Sun") + dt.timedelta(days=7 * W * (cycles - 1) + 7 * (W - 1)) if runs and runs[0]["date"] else None
+    return {"runs": out_runs, "horizon_cycles": cycles, "horizon_end": hz_end.isoformat() if hz_end else None,
+            "first_cycle_till_cost": round(till, 2), "cycle_cost": round(recurring, 2),
+            "weekly_cost": round(recurring / W, 2), "consumed_value_per_cycle": round(prorated, 2),
+            "waste_per_cycle": round(waste, 2), "budget_cycles_simulated": horizon,
+            "warnings": sorted(set(warnings)), "missing_price": missing_price}
+
+
+BUDGET_CYCLES = 13        # minimum cycles simulated to measure discards (≈ one year of 4-week cycles)
+BUDGET_MAX_CYCLES = 260   # cap for very slow movers
+
+
+def budget_horizon(plan, demand, cycles):
+    """Cycles to simulate so every item with a shelf life gets through at least two packs — expiry waste
+    of slow movers (a spice jar opened once a year) only shows once a pack has run out its shelf life."""
+    ING = plan["ingredients"]
+    need = defaultdict(float)
+    for dd in demand.values():
+        for k, uses in dd.items():
+            need[k] += sum(g for _, g in uses)          # uses: [[day_offset, grams], …] (#9)
+    longest = 0.0
+    for k, g in need.items():
+        sh = ING[k].get("shop") or {}
+        pack_amt = _pack_amount(ING[k])
+        if g > 0 and pack_amt and sh.get("shelf_days"):
+            longest = max(longest, pack_amt / g)
+    # never shorter than the shopping horizon itself (#22); the cap only limits the extra length for slow movers
+    return int(max(cycles, min(BUDGET_MAX_CYCLES, max(BUDGET_CYCLES, math.ceil(2 * longest) + 1))))
 
 
 def _pack_amount(ingr):
@@ -635,9 +799,18 @@ def compute(plan):
         a, meals = day_acc(plan, d)
         res["days"][day] = {"type": d.get("type", "training"), "total": a.export(),
                             "meals": [{"name": m["name"], **ma.export()} for m, ma in meals]}
-    # per-week day totals when overrides exist
+    # every distinct day actually eaten (template + week overrides), and the per-week calendar
+    res["cycle_days"] = []
+    for g in day_groups(plan):
+        a, meals = day_acc(plan, g["def"])
+        res["cycle_days"].append({"day": g["day"], "weeks": g["weeks"], "override": g["override"], "label": g["label"],
+                                  "type": g["def"].get("type", "training"), "total": a.export(),
+                                  "meals": [{"name": m["name"], **ma.export()} for m, ma in meals]})
     for w in range(1, W + 1):
-        res["weeks"][w] = {day: day_acc(plan, day_def(plan, w, day))[0].export()["n"] for day in WEEKDAYS}
+        res["weeks"][w] = {}
+        for cd in res["cycle_days"]:
+            if w in cd["weeks"]:
+                res["weeks"][w][cd["day"]] = cd["total"]["n"]
     res["inventory"] = inventory(plan)
     res["shopping"] = shopping(plan)
     res["checks"] = checks(plan, res)
@@ -718,16 +891,146 @@ def allergy_check(plan):
         out["flags"].append("ALLERGENS NOT CHECKED for: " + ", ".join(out["unchecked"]) +
                             " — add `allergens` from the product label")
     return out
+# Share of a day's food mass without a value above which the MINIMUM side is worded as a lower bound
+# ("met (known part alone)"). Never used to confirm an upper limit: a total UL is only "within UL" when no
+# food at all lacks a value (limit_status, missing_g), since a pinch of a concentrated source can exceed it.
+INCOMPLETE = 0.01
+
+
+def micro_status(avg, peak, lim, missing_share):
+    """Status of one nutrient. Missing values were summed as 0, so with incomplete data the known total
+    is a LOWER BOUND: it can show a minimum is met, or that an upper limit is exceeded, but never that
+    intake stays below an upper limit."""
+    floor, aim, ul = lim.get("floor"), lim.get("aim"), lim.get("ul")
+    complete = missing_share <= INCOMPLETE
+    if floor and avg < floor:
+        min_status = "below floor" if complete else "unverified — known part below floor"
+    elif aim and avg < aim:
+        min_status = "below aim" if complete else "unverified — known part below aim"
+    elif floor or aim:
+        min_status = "met" if complete else "met (known part alone)"
+    else:
+        min_status = "n/a"
+    if not ul:
+        ul_status = "n/a"
+    elif peak > ul:
+        ul_status = "ABOVE UL"
+    else:
+        ul_status = "within UL" if complete else "UL unverified"
+    if ul_status == "ABOVE UL":
+        status = "ABOVE UL" + ("" if complete else " (known part alone)")
+    elif complete:
+        status = {"below floor": "below floor", "below aim": "below aim"}.get(min_status, "ok")
+    else:
+        parts = [min_status] + ([ul_status] if ul_status == "UL unverified" else [])
+        status = "data incomplete: " + "; ".join(parts)
+    flag = status != "ok" and not (not complete and min_status == "met (known part alone)" and ul_status == "n/a")
+    return {"complete": complete, "lower_bound": not complete, "min_status": min_status, "ul_status": ul_status,
+            "status": status, "flag": flag}
+def limit_status(res, key, lim, avg, peak, missing_share, missing_g=None):
+    """Status of one nutrient: the minimum side from micro_status() (#4: incomplete data makes the total a
+    lower bound) and every upper limit from limit_check() (#6: total or a specific form). A total limit
+    that is not exceeded can only be confirmed when NO food lacks a value (missing_g, unrounded grams per
+    day — not the display share, which tolerates INCOMPLETE and drops ≤ 0.1 %); a form limit needs a known
+    amount of that form in every food."""
+    out = micro_status(avg, peak, {**lim, "ul": None}, missing_share)
+    complete = out["complete"]
+    if missing_g is None:
+        missing_g = max((cd["total"].get("missing_g", {}).get(key, 0) for cd in res["cycle_days"]), default=0)
+    checks_ = [limit_check(res, key, lim, L) for L in limits_of(lim)]
+    for x in checks_:
+        if x["basis"] == "total" and x["status"] == "ok" and missing_g > 0:
+            x["status"] = "unverified"
+            g = fmt_num(round(missing_g, 3)) if missing_g >= 0.001 else "< 0.001"
+            x["reason"] = f"UL {x['ul']:g} unverified — {g} g of food per day has no {key} value"
+    above = [x for x in checks_ if x["status"] == "above"]
+    unverified = [x for x in checks_ if x["status"] == "unverified"]
+    unresolved = [x for x in checks_ if x["status"] == "unresolved"]
+    if not checks_:
+        ul_status = "n/a"
+    elif above:
+        ul_status = "ABOVE UL"
+    elif unverified:
+        ul_status = "UL unverified"
+    elif unresolved:
+        ul_status = "UL unresolved"
+    else:
+        ul_status = "within UL"
+    if above:
+        # "(known part alone)": a total limit exceeded although some food has no value — form limits are
+        # judged on the form's own data (limit_check), not on the total's completeness
+        st = "ABOVE UL" + "".join(f" ({x['label']})" for x in above if x["basis"] != "total") + \
+             ("" if missing_g == 0 or not any(x["basis"] == "total" for x in above) else " (known part alone)")
+    else:
+        if complete:
+            st = {"below floor": "below floor", "below aim": "below aim"}.get(out["min_status"], "ok")
+        else:
+            st = "data incomplete: " + out["min_status"]
+        if unverified:
+            st = "UL unverified" if st == "ok" else st + "; UL unverified"
+    if unresolved and not above:
+        st = (st + "; " if st != "ok" else "") + "UL unresolved: " + "; ".join(x["reason"] for x in unresolved)
+    flag = st != "ok" and not (not complete and out["min_status"] == "met (known part alone)"
+                               and ul_status in ("n/a", "within UL"))
+    out.update({"ul_status": ul_status, "status": st, "flag": flag, "limits": checks_})
+    return out
+
+
+def limits_of(lim):
+    """Upper limits of one nutrient: `limits` [{basis, ul}] plus the legacy total `ul`."""
+    out = [dict(x) for x in lim.get("limits", [])]
+    for x in out:
+        x["basis"] = LEGACY_FORMS.get(x.get("basis", "total"), x.get("basis", "total"))
+    if lim.get("ul") and not any(x.get("basis", "total") == "total" for x in out):
+        out.append({"basis": "total", "ul": lim["ul"]})
+    return out
+
+
+def limit_check(res, key, lim, L):
+    """Compare the right quantity with one limit. basis "total" = whole nutrient (food + supplements);
+    a form key = only that form (food form + supplement form). Unknown form → "unresolved", never ok."""
+    basis, ul = L.get("basis", "total"), float(L["ul"])
+    supp = float(lim.get("supplement") or 0)
+    totals = [cd["total"] for cd in res["cycle_days"]]     # every day of the cycle, overrides included (#3)
+    if basis == "total":
+        peak = max(t["n"].get(key, 0) for t in totals) + supp
+        return {"basis": basis, "label": "total", "ul": ul, "peak": round(peak, 2),
+                "status": "above" if peak > ul else "ok", "reason": ""}
+    label = FORMS.get(basis, (None, basis))[1]
+    food = max(t["forms"].get(basis, 0) for t in totals)
+    miss = max(t.get("form_missing_g", {}).get(basis, 0) for t in totals)
+    forms = lim.get("supplement_forms") or {}
+    if basis in forms:
+        s_form = float(forms[basis])
+    elif supp == 0:
+        s_form = 0.0
+    elif basis in SUPPLEMENT_IS_FORM:
+        s_form = supp
+    else:
+        s_form = None
+    known = food + (s_form or 0)
+    out = {"basis": basis, "label": label, "ul": ul, "peak": round(known, 2)}
+    if known > ul:
+        return {**out, "status": "above", "reason": ""}
+    if s_form is None:
+        return {**out, "status": "unresolved",
+                "reason": f"{label} limit {ul:g} — supplement form unknown (set supplement_forms.{basis})"}
+    if miss > 0:   # strict: any food with an unknown amount of this form could carry it over the limit
+        return {**out, "status": "unresolved",
+                "reason": f"{label} limit {ul:g} — {fmt_num(round(miss, 3)) if miss >= 0.001 else '< 0.001'} g of food "
+                          f"per day has no {basis} value"}
+    return {**out, "status": "ok", "reason": ""}
 
 
 def checks(plan, res):
     T = plan.get("targets", {})
     alg = allergy_check(plan)
     out = {"days": [], "micros": [], "flags": list(alg["flags"]), "allergies": alg}
-    for day in WEEKDAYS:
-        n = res["days"][day]["total"]["n"]
-        t = T.get(res["days"][day]["type"], {})
-        row = {"day": day, "type": res["days"][day]["type"]}
+    for cd in res["cycle_days"]:
+        day = cd["label"]
+        n = cd["total"]["n"]
+        t = T.get(cd["type"], {})
+        row = {"day": day, "weeks": cd["weeks"], "override": cd["override"], "type": cd["type"]}
         for k in ("kcal", "protein_g", "carb_g", "fat_g", "fiber_g", "salt_g"):
             row[k] = round(n[k], 1)
             if k in t:
@@ -739,35 +1042,68 @@ def checks(plan, res):
         if "protein_g" in t and n["protein_g"] < t["protein_g"] - 10:
             out["flags"].append(f"{day}: protein {n['protein_g']:.0f} g is >10 g under target {t['protein_g']} g")
         if T.get("fiber_min") and n["fiber_g"] < T["fiber_min"]:
-            out["flags"].append(f"{day}: fibre {n['fiber_g']:.0f} g under {T['fiber_min']} g")
+            gap = cd["total"]["mshare"].get("fiber_g", 0)       # this cycle day, overrides included
+            if gap > INCOMPLETE:
+                out["flags"].append(f"{day}: fibre ≥ {n['fiber_g']:.0f} g known, under {T['fiber_min']} g — "
+                                    f"{gap:.0%} of the food has no fibre value, so the true total may be higher")
+            else:
+                out["flags"].append(f"{day}: fibre {n['fiber_g']:.0f} g under {T['fiber_min']} g")
         if T.get("salt_max") and n["salt_g"] > T["salt_max"] * 1.5:
             out["flags"].append(f"{day}: salt {n['salt_g']:.1f} g (pre-workout/intra salt may justify it — check)")
-        sc = res["days"][day]["total"]["score"]
+        sc = cd["total"]["score"]
         if sc and sc["scores"][sc["limiting"]] < 100:
             out["flags"].append(f"{day}: day-level amino-acid score {sc['scores'][sc['limiting']]} (limiting {sc['limiting']})")
+    # energy availability per day: (intake − planned exercise) / fat-free mass
+    meta = plan.get("meta", {})
+    ffm, ex = meta.get("ffm_kg"), meta.get("exercise_kcal") or {}
+    out["energy_availability"] = []
+    # every day definition of the cycle, week overrides included (#3); labels like "Sat (wk 2, 4)"
+    for g, cd in zip(day_groups(plan), res["cycle_days"]):
+        d = g["def"]
+        exercise = d.get("exercise_kcal", ex.get(d.get("type", "training")))
+        r = energy.assess(cd["total"]["n"]["kcal"], exercise, ffm)
+        r["day"] = cd["label"]
+        out["energy_availability"].append(r)
+        if r["band"] == "low":
+            out["flags"].append(f"{r['day']}: energy availability {energy.describe(r)}")
+    # what was actually checked decides the note — not whether the meta-level defaults exist
+    missing = [r for r in out["energy_availability"] if r["value"] is None]
+    if missing:
+        days = ", ".join(r["day"] for r in missing)
+        reasons = "; ".join(sorted({r["reason"] for r in missing}))
+        msg = (f"energy availability not checked for {days} ({reasons}) — set meta.ffm_kg and meta.exercise_kcal "
+               "for every day type (from targets.py), or exercise_kcal on the day, so intake can be checked "
+               "against training load")
+        out["ea_note"] = msg
+        if meta.get("goal") == "cut":
+            out["flags"].append(msg)
     mt = T.get("micros", {})
+    # every actual day of the cycle (W x 7), so week overrides count in averages and maxima
+    actual = [cd for cd in res["cycle_days"] for _ in cd["weeks"]]
     for k, lim in mt.items():
-        vals = [res["days"][d]["total"]["n"].get(k, 0) for d in WEEKDAYS]
-        miss = max(res["days"][d]["total"]["mshare"].get(k, 0) for d in WEEKDAYS)
-        avg = sum(vals) / 7
+        vals = [cd["total"]["n"].get(k, 0) for cd in actual]
+        miss = max(cd["total"]["mshare"].get(k, 0) for cd in actual)
+        avg = sum(vals) / len(vals)
+        worst = max(actual, key=lambda cd: cd["total"]["n"].get(k, 0))["label"]
         row = {"key": k, "avg": round(avg, 2), "min": round(min(vals), 2), "max": round(max(vals), 2),
-               "floor": lim.get("floor"), "aim": lim.get("aim"), "ul": lim.get("ul"),
-               "supplement": lim.get("supplement", 0), "missing_share": miss}
+               "floor": lim.get("floor"), "aim": lim.get("aim"),
+               "ul": "; ".join(f"{x['ul']:g}" + ("" if x.get("basis", "total") == "total" else f" ({FORMS.get(x['basis'], (0, x['basis']))[1]})")
+                               for x in limits_of(lim)) or None,
+               "supplement": lim.get("supplement", 0), "missing_share": miss, "max_day": worst}
         tot_avg = avg + (lim.get("supplement") or 0)
+        tot_max = max(vals) + (lim.get("supplement") or 0)
         row["avg_incl_supp"] = round(tot_avg, 2)
-        st = "ok"
-        if lim.get("floor") and tot_avg < lim["floor"]:
-            st = "below floor"
-        elif lim.get("aim") and tot_avg < lim["aim"]:
-            st = "below aim"
-        if lim.get("ul") and (max(vals) + (lim.get("supplement") or 0)) > lim["ul"]:
-            st = "ABOVE UL"
-        if miss > 0.1 and st != "ok":
-            st += " (data incomplete)"
-        row["status"] = st
+        row.update(limit_status(res, k, lim, tot_avg, tot_max, miss))
         out["micros"].append(row)
-        if st != "ok":
-            out["flags"].append(f"micro {k}: {st} — week avg {tot_avg:.1f} (floor {lim.get('floor')}, aim {lim.get('aim')}, UL {lim.get('ul')})")
+        if row["flag"]:
+            # name the quantity that broke each limit: the total on its highest day, or the form's own peak
+            extra = "".join(f"; highest day {worst} {tot_max:.1f}" if x["basis"] == "total"
+                            else f"; {x['label']} peak {x['peak']:g} vs UL {x['ul']:g}"
+                            for x in row["limits"] if x["status"] == "above")
+            extra += "".join(f"; {x['reason']}" for x in row["limits"] if x["status"] == "unverified" and row["complete"])
+            out["flags"].append(f"micro {k}: {row['status']} — cycle avg {'≥ ' if not row['complete'] else ''}{tot_avg:.1f} "
+                                f"(floor {lim.get('floor')}, aim {lim.get('aim')}, UL {row['ul']}"
+                                + (f"; {miss:.0%} of the food has no value" if not row["complete"] else "") + f"){extra}")
     inv = res["inventory"]
     for s in inv["steady_shortfalls"]:
         out["flags"].append(f"batch shortfall: {s['recipe']} short {s['short']} portions in week {s['week']} {s['day']}")
@@ -785,7 +1121,7 @@ def checks(plan, res):
             out["flags"].append(f"batch surplus grows every cycle ({grow} portions, freezer +{fmt_num(inv['drift_per_cycle'])} "
                                 "containers per cycle) — no steady state: rebalance cooking vs eating, or set "
                                 "cycle.surplus_policy (discard/give away spares, or a verified horizon)")
-    if fz and inv["peak_total_portions"] > fz:
+    if fz is not None and inv["peak_total_portions"] > fz:   # 0 = no freezer: any frozen stock is a problem
         out["flags"].append(f"freezer: peak {inv['peak_total_portions']} containers stored vs capacity {fz}")
     for w in res["shopping"]["warnings"]:
         out["flags"].append("shopping: " + w)
@@ -813,17 +1149,27 @@ def report(plan, res):
         L.append(f"| {r['day']} | {r['type']} | {r['kcal']:.0f} | {r.get('kcal_delta', 0):+.0f} | {r['protein_g']:.0f} | "
                  f"{r.get('protein_g_delta', 0):+.0f} | {r['carb_g']:.0f} | {r['fat_g']:.0f} | {r['fiber_g']:.0f} | {r['salt_g']:.1f} |")
     if res["checks"]["micros"]:
-        L.append("\n## Micronutrients (week average, food + listed supplements)\n")
+        L.append("\n## Micronutrients (cycle average over every day incl. week overrides, food + listed supplements)\n")
         ref = plan.get("targets", {}).get("reference")
         if ref:
             L.append(f"Floors: {ref.get('name')}, {ref.get('population')} (checked {ref.get('checked')}).\n")
         else:
             L.append("Floors: reference version not recorded in plan.json (copy targets.reference from targets.py).\n")
-        L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Status |")
-        L.append("|---|---|---|---|---|---|---|")
+        L.append("| Nutrient | Avg/day | incl. supp | Floor | Aim | UL | Food without data | Status |")
+        L.append("|---|---|---|---|---|---|---|---|")
         for r in res["checks"]["micros"]:
             lab = MICRO_LABELS.get(r["key"], (r["key"], ""))
-            L.append(f"| {lab[0]} ({lab[1]}) | {r['avg']:.1f} | {r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | {r['ul'] or '–'} | {r['status']} |")
+            ge = "≥ " if r["lower_bound"] else ""
+            L.append(f"| {lab[0]} ({lab[1]}) | {ge}{r['avg']:.1f} | {ge}{r['avg_incl_supp']:.1f} | {r['floor'] or '–'} | {r['aim'] or '–'} | "
+                     f"{r['ul'] or '–'} | {r['missing_share']:.0%} | {r['status']} |")
+        L.append("\n“≥” = some food has no value for this nutrient, so the true intake is at least this much. "
+                 "An upper limit can only be confirmed once those values are filled in.")
+    L.append("\n## Energy availability (intake − planned exercise, per kg fat-free mass)\n")
+    if res["checks"].get("ea_note"):
+        L.append(res["checks"]["ea_note"] + "\n")
+    for r in res["checks"]["energy_availability"]:
+        if r["value"] is not None:
+            L.append(f"- {r['day']}: {energy.describe(r)}")
     inv = res["inventory"]
     if inv["per_recipe"]:
         if inv["steady"]:
@@ -843,8 +1189,10 @@ def report(plan, res):
         if inv["startup_shortfalls"]:
             L.append(f"\nFirst cycle from an empty freezer runs short {len(inv['startup_shortfalls'])}× — plan an extra start-up cook (see shortfalls in computed.json).")
     sh = res["shopping"]
-    L.append(f"\n## Cost\n\nSteady state ≈ {sh['cycle_cost']:.2f} per cycle · ≈ {sh['weekly_cost']:.2f} per week "
-             f"(first cycle at the till ≈ {sh['first_cycle_till_cost']:.2f}, includes stocking slow movers)")
+    L.append(f"\n## Cost\n\nRecurring cost ≈ {sh['cycle_cost']:.2f} per cycle · ≈ {sh['weekly_cost']:.2f} per week "
+             f"= food eaten ≈ {sh['consumed_value_per_cycle']:.2f} + thrown away ≈ {sh['waste_per_cycle']:.2f} per cycle "
+             f"(discards measured over {sh['budget_cycles_simulated']} simulated cycles). "
+             f"First cycle at the till ≈ {sh['first_cycle_till_cost']:.2f} (includes stocking slow movers).")
     if sh["missing_price"]:
         L.append(f"\nNo price yet: {', '.join(sh['missing_price'])}")
     L.append("\n## Flags\n")

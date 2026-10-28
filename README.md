@@ -1,6 +1,6 @@
 # athlete-meal-plan
 
-A Claude skill that turns a conversation into a complete, cookable meal plan for an athlete:
+A skill that turns a conversation into a complete, cookable meal plan for an athlete:
 an interview where the athlete picks the depth of each topic, evidence-based calorie, macro and
 micronutrient targets, a draft plan to approve, and then a coordinated set of outputs that are all
 generated from one data file:
@@ -32,7 +32,7 @@ spreadsheet, shopping list and recipes never drift apart.
 ## Repository layout
 
 ```
-SKILL.md                      instructions Claude follows (phases, rules, safety)
+SKILL.md                      instructions the assistant follows (phases, rules, safety)
 scripts/
   targets.py                  energy, macro and micronutrient targets from interview answers
   mealplan.py                 core engine: nutrients, amino-acid scores, batch inventory, shopping, checks
@@ -96,12 +96,50 @@ pip install -r ~/.claude/skills/athlete-meal-plan/requirements.txt
 
 **Claude apps (upload a skill)**
 
+1. Open [Releases](https://github.com/MechTee/meal-plan-skill/releases) and choose a version.
+2. Download **`athlete-meal-plan.zip`** under **Assets** (not GitHub's automatic **Source code (zip)**).
+3. Upload that ZIP in the app's skill settings.
+
+The release ZIP contains a single `athlete-meal-plan/` folder with the skill, scripts, templates,
+references, Python requirements and regression tests. For a Claude Code install without Git,
+extract it into `~/.claude/skills/` (or a project's `.claude/skills/`) and install its requirements
+as shown above.
+
+**ChatGPT Work (personal skill import)**
+
+Use a ChatGPT Work environment that offers `@skill-creator` and personal skills. OpenAI
+documents standalone skills in the ChatGPT desktop app; this is not a universal ZIP-upload
+installation method for every ChatGPT app or workspace. See
+[OpenAI's skill documentation](https://learn.chatgpt.com/docs/build-skills).
+
+1. Download `athlete-meal-plan.zip` from [Releases](https://github.com/MechTee/meal-plan-skill/releases),
+   or build it using the command below.
+2. Start a **Work** conversation, attach the complete ZIP, and send:
+
+   ```text
+   @skill-creator Install the attached athlete-meal-plan.zip as a personal skill named
+   athlete-meal-plan. Preserve its instructions and keep the bundled scripts, assets,
+   references and requirements.txt together. Check that Python 3.10+ and the dependencies
+   in requirements.txt are available in the execution environment.
+   ```
+
+3. Wait for confirmation that installation succeeded. Start a new Work conversation and use
+   the `@` menu to select the installed `athlete-meal-plan` skill when asking for a meal plan.
+
+Attaching the ZIP to an ordinary chat does not by itself install a reusable skill. The import
+uses the same complete ZIP as Claude; distributing it through ChatGPT's Plugin Directory
+would require separate plugin packaging and publication.
+
+**Build a ZIP yourself** (also works before the first release is published)
+
 ```bash
 git clone https://github.com/MechTee/meal-plan-skill athlete-meal-plan
-cd athlete-meal-plan && git archive --format=zip --prefix=athlete-meal-plan/ -o ../athlete-meal-plan.zip HEAD
+cd athlete-meal-plan
+git archive --format=zip --prefix=athlete-meal-plan/ -o ../athlete-meal-plan.zip HEAD \
+  SKILL.md README.md requirements.txt scripts assets references tests evals
 ```
 
-Upload `athlete-meal-plan.zip` in the app's skill settings.
+Install the resulting `athlete-meal-plan.zip` using the instructions for your app above.
 
 **Host differences.** The skill checks what the session can do and falls back when a tool is
 missing: structured questions → numbered questions in chat; LibreOffice recalculation → workbook
@@ -110,6 +148,19 @@ file or page publishing tools → files written to an `outputs/` folder; subagen
 research.
 
 **Check an install:** `python3 -m unittest discover tests` runs the script regression tests.
+
+## Release packaging
+
+The **Package skill** GitHub Actions workflow builds the ZIP and runs the regression tests from
+the extracted package on pull requests, pushes to `main`, manual workflow runs and published
+releases. Each successful run keeps the tested ZIP in its **skill-package** workflow artifact;
+extract that artifact download once to get the installable `athlete-meal-plan.zip` inside.
+
+To publish a downloadable version, create and publish a GitHub release with a tag that includes
+this workflow (after it has been merged). Stable releases and prereleases both trigger packaging
+from the tagged commit. Once the workflow succeeds, `athlete-meal-plan.zip` appears in that
+release's **Assets**. Re-running the release workflow replaces the asset with the same name.
+Manual workflow runs only build and test; they do not publish a release.
 
 ## Notes and limits
 
